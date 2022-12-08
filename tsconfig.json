@@ -12,7 +12,7 @@
 
 		/* Language and Environment */
 		"target": "es2016" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
-		"lib": [] /* Specify a set of bundled library declaration files that describe the target runtime environment. */,
+		"lib": ["ES2017", "ES2018", "DOM"] /* Specify a set of bundled library declaration files that describe the target runtime environment. */,
 		"jsx": "react-jsx" /* Specify what JSX code is generated. */,
 		// "experimentalDecorators": true,                   /* Enable experimental support for TC39 stage 2 draft decorators. */
 		// "emitDecoratorMetadata": true,                    /* Emit design-type metadata for decorated declarations in source files. */
@@ -38,6 +38,8 @@
 			"@statics/*": ["src/statics/*"],
 			"@styles/*": ["src/styles/*"],
 			"@templates/*": ["src/templates/*"],
+			"@lib/*": ["src/lib/*"],
+			"@utils/*": ["src/utils/*"],
 		} /* Specify a set of entries that re-map imports to additional lookup locations. */,
 		// "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
 		// "typeRoots": [],                                  /* Specify multiple folders that act like './node_modules/@types'. */
