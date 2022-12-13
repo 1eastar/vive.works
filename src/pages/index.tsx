@@ -4,13 +4,12 @@ import { StaticImage } from "gatsby-plugin-image"
 
 import Layout from "../components/Layout/Layout"
 import Seo from "../components/Seo/Seo"
-import styles from "../components/index.css"
 
 const IndexPage = () => (
   <Layout>
     {/* <div className={styles.textCenter}> */}
       <StaticImage
-        src="../images/example.png"
+        src="../statics/images/example.png"
         loading="eager"
         width={64}
         quality={95}

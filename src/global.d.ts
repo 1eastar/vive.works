@@ -1,4 +1,4 @@
-declare module "*.scss" {
-  const content: { [className: string]: string };
-  export = content;
+declare module '*.scss' {
+  const classes: { readonly [className: string]: string }
+  export = classes
 }

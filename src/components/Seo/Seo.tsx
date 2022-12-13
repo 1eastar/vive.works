@@ -2,7 +2,7 @@
 import React from 'react'
 
 /* Internal */
-import { useSiteMetadata } from 'src/hooks/useSiteMetadata.hook'
+import { useSiteMetadata } from '@hooks/useSiteMetadata.hook'
 
 interface SeoProps {
 	lang?: string

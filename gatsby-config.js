@@ -4,6 +4,8 @@
  * See: https://www.gatsbyjs.com/docs/reference/config-files/gatsby-config/
  */
 
+const path = require('path');
+
 /**
  * @type {import('gatsby').GatsbyConfig}
  */
@@ -22,7 +24,7 @@ module.exports = {
 			resolve: `gatsby-source-filesystem`,
 			options: {
 				name: `images`,
-				path: `${__dirname}/src/public/images`,
+				path: `${__dirname}/src/statics/images`,
 			},
 		},
 		{
@@ -45,10 +47,27 @@ module.exports = {
 				// https://css-tricks.com/meta-theme-color-and-trickery/
 				// theme_color: `#663399`,
 				display: `minimal-ui`,
-				icon: `src/images/gatsby-icon.png`, // This path is relative to the root of the site.
+				icon: `src/statics/images/gatsby-icon.png`, // This path is relative to the root of the site.
 			},
 		},
-		`gatsby-transformer-remark`,
+		{
+			resolve: `gatsby-plugin-mdx`,
+			options: {
+				gatsbyRemarkPlugins: [
+					{
+            resolve: `gatsby-remark-images`,
+            options: {
+              linkImagesToOriginal: false,
+              disableBgImage: true,
+              quality: 100,
+              withWebp: true,
+              loading: 'lazy',
+            },
+          },
+				],
+				extensions: [`.md`, `.mdx`],
+			},
+		},
 		`gatsby-plugin-sass`
 		// {
 		// 	resolve: `gatsby-plugin-graphql-codegen`,
