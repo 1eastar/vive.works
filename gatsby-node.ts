@@ -1,17 +1,18 @@
 /* External */
-import { CreatePagesArgs } from "gatsby"
+import { CreateNodeArgs, CreatePagesArgs } from "gatsby"
 import path from 'path'
+import readingTime from 'reading-time'
 
 /* Internal */
 
 require('ts-node').register()
 
 export type PageContext = {
-	// path: string
+	slug: string
 }
 
 interface MDXMetadata {
-	path: string
+	slug: string
 	id: string
 	title: string
 	description: string
@@ -20,32 +21,54 @@ interface MDXMetadata {
 	image: string
 }
 
+type MDXNode = {
+	body: string
+	frontmatter: Pick<MDXMetadata, "slug">
+}
+
 interface QueryResult {
 	allMdx: {
-		nodes: {
-			frontmatter: Pick<MDXMetadata, "path" | "id">
-			internal: {
-				contentFilePath: string
-			}
-		}[]
+		nodes: MDXNode[]
 	}
+}
+const dummy = {
+	allMdx: {
+		nodes: [
+			{
+				body: 'body',
+				frontmatter: {
+					slug: '/20221213'
+				},
+			}
+		]
+	}
+}
+
+exports.onCreateNode = ({ node, actions }: CreateNodeArgs<MDXNode>) => {
+  const { createNodeField } = actions
+  if (node.internal.type === `Mdx`) {
+    createNodeField({
+      node,
+      name: `timeToRead`,
+      value: readingTime(node.body)
+    })
+  }
 }
 
 exports.createPages = async ({ actions, graphql, reporter }: CreatePagesArgs) => {
 	const postTemplatePath = path.resolve(`./src/templates/PostTemplate.tsx`)
 	const { createPage } = actions
 
-	const { data, errors } = await graphql<QueryResult>(`
+	const { data = dummy, errors } = await graphql<QueryResult>(`
 		{
-			allMdx(sort: { frontmatter: { date: DESC } }, limit: 100) {
+			allMdx(
+				sort: { frontmatter: { date: DESC } },
+				limit: 100
+			) {
 				nodes {
 					frontmatter {
-						path
-						id
+						slug
 					}
-          internal {
-            contentFilePath
-          }
 				}
 			}
 		}
@@ -57,10 +80,11 @@ exports.createPages = async ({ actions, graphql, reporter }: CreatePagesArgs) =>
 
 	data!.allMdx.nodes.forEach((node) => {
 		createPage<PageContext>({
-			path: node.frontmatter.path,
-			component: `${postTemplatePath}?__contentFilePath=${node.internal.contentFilePath}`,
-			// component: postTemplatePath,
-			context: {id: node.frontmatter.id},
+			path: node.frontmatter.slug,
+			// PostTemplate.tsx에서 pageQuery로 path인 /slug에 해당하는 mdx를 불러올 거기 때문에 contentFilePath로 매칭해줄 필요없음
+			// component: `${postTemplatePath}?__contentFilePath=${node.internal.contentFilePath}`,
+			component: postTemplatePath,
+			context: {slug: node.frontmatter.slug},
 		})
 	})
 }

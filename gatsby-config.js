@@ -68,17 +68,14 @@ module.exports = {
 				extensions: [`.md`, `.mdx`],
 			},
 		},
-		`gatsby-plugin-sass`
-		// {
-		// 	resolve: `gatsby-plugin-graphql-codegen`,
-		// 	options: {
-		// 		fileName: `./src/graphql-type.ts`,
-		// 		documentPaths: [
-		// 			'./src/**/*.{ts,tsx}',
-		// 			'./node_modules/gatsby-*/**/*.js',
-		// 			'./gatsby-node.ts',
-		// 		],
-		// 	},
-		// }
+    {
+      resolve: `gatsby-plugin-sass`,
+      options: {
+        sassRuleTest: /.^/,
+        sassRuleModulesTest: /\.s(a|c)ss$/,
+        useResolveUrlLoader: true,
+      },
+    },
+		`gatsby-plugin-react-helmet`,
 	],
 }
