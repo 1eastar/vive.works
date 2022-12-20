@@ -1,0 +1,13 @@
+@import '@styles/_variables.scss';
+
+.inlineCode {
+  display: inline-block;
+  padding: 0 7px;
+  margin: 0 2px;
+  background-color: var(--black5);
+  font-family: 'FiraCode';
+  font-size: 13px;
+  line-height: 22px;
+  color: var(--inline-code-text);
+  border-radius: 5px;
+}

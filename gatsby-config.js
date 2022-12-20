@@ -18,7 +18,6 @@ module.exports = {
 		image: ``,
 	},
 	plugins: [
-		`gatsby-plugin-typescript`,
 		`gatsby-plugin-image`,
 		{
 			resolve: `gatsby-source-filesystem`,
@@ -77,5 +76,16 @@ module.exports = {
       },
     },
 		`gatsby-plugin-react-helmet`,
+		`babel-preset-gatsby`,
+		{
+      resolve: `gatsby-plugin-typescript`,
+      // options: {
+      //   isTSX: true, // defaults to false
+      //   allExtensions: true, // defaults to false
+      // },
+    },
 	],
 }
+
+// inline code에 scss 안 먹는 거 고쳐야 함.
+// codeblock 따로 만들거면 다로 만들어야 함.

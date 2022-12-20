@@ -1,4 +1,4 @@
-import styles from './Heading.scss'
+import * as styles from './Heading.scss'
 
 interface HeadingProps {
   children: string

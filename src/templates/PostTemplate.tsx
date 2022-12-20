@@ -1,11 +1,9 @@
 /* External */
-import React, { memo } from 'react'
-import { graphql, HeadProps } from 'gatsby'
+import { graphql } from 'gatsby'
 import { MDXProvider } from '@mdx-js/react'
-import { MDXComponents } from 'mdx/types'
+import type { MDXComponents } from 'mdx/types'
 
 /* Internal */
-import { BaseTemplateProps } from '@commons/types/BaseTemplateType'
 import Seo from '@components/Seo'
 import Layout from '@components/Layout'
 import * as Tags from './tags'
@@ -13,6 +11,7 @@ import * as Tags from './tags'
 const tagComponents = {
   p: Tags.Paragraph,
   h1: Tags.Heading,
+  code: Tags.InlineCode,
 
   h2: props => props.children,
   strong: props => props.children,
@@ -20,8 +19,6 @@ const tagComponents = {
   blockquote: props => props.children,
   hr: props => props.children,
   a: props => props.children,
-  code: props => props.children,
-  inlineCode: props => props.children,
   ol: props => props.children,
   ul: props => props.children,
   pre: props => props.children,
@@ -50,12 +47,9 @@ interface pageQueryResult {
   }
 }
 
-type PostTemplateProps = BaseTemplateProps<{
-  id: string
-  html: string
-}>
+type PostTemplateProps = pageQueryResult & { children: any }
     
-const PostTemplate = ({ data }) => {
+const PostTemplate = ({ data, children }: PostTemplateProps) => {
   const { mdx } = data
   const {
     body,
@@ -74,7 +68,7 @@ const PostTemplate = ({ data }) => {
       },
     },
   } = mdx
-
+console.log(data, 1111, children)
   return (
     <Layout>
       <Seo
@@ -85,17 +79,13 @@ const PostTemplate = ({ data }) => {
         image={image}
       />
       <MDXProvider components={tagComponents}>
-        <code>
-          <pre>{JSON.stringify(data, null, 4)}</pre>
-          {/* <div dangerouslySetInnerHTML={{ __html: html }} /> */}
-        </code>
-        {body}
+        {children}
       </MDXProvider>
     </Layout>
   )
 }
 
-export const query = graphql`
+export const pageQuery = graphql`
   query($slug: String!) {
     mdx(frontmatter: { slug: { eq: $slug } }) {
       body

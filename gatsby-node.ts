@@ -1,13 +1,13 @@
 /* External */
-import { CreateNodeArgs, CreatePagesArgs } from "gatsby"
+import { CreateNodeArgs, GatsbyNode } from "gatsby"
 import path from 'path'
 import readingTime from 'reading-time'
 
 /* Internal */
 
-require('ts-node').register()
+// require('ts-node').register()
 
-export type PageContext = {
+type PageContext = {
 	slug: string
 }
 
@@ -24,6 +24,9 @@ interface MDXMetadata {
 type MDXNode = {
 	body: string
 	frontmatter: Pick<MDXMetadata, "slug">
+	internal: {
+		contentFilePath: string
+	}
 }
 
 interface QueryResult {
@@ -31,20 +34,45 @@ interface QueryResult {
 		nodes: MDXNode[]
 	}
 }
-const dummy = {
-	allMdx: {
-		nodes: [
-			{
-				body: 'body',
-				frontmatter: {
-					slug: '/20221213'
-				},
+
+export const createPages: GatsbyNode["createPages"] = async ({ actions, graphql, reporter }) => {
+	const postTemplatePath = path.resolve(`./src/templates/PostTemplate.tsx`)
+	const { createPage } = actions
+
+	const { data, errors } = await graphql<QueryResult>(`
+		{
+			allMdx(
+				sort: { frontmatter: { date: DESC } },
+				limit: 1000
+			) {
+				nodes {
+					frontmatter {
+						slug
+					}
+					internal {
+						contentFilePath
+					}
+				}
 			}
-		]
+		}
+	`)
+
+	if (errors || !data) {
+		reporter.panicOnBuild('Error loading MDX result', errors)
 	}
+
+	data!.allMdx.nodes.forEach((node) => {
+		createPage<PageContext>({
+			path: node.frontmatter.slug,
+			component: `${postTemplatePath.trim()}?__contentFilePath=${node.internal.contentFilePath}`,
+			context: {slug: node.frontmatter.slug},
+		})
+	})
 }
 
-exports.onCreateNode = ({ node, actions }: CreateNodeArgs<MDXNode>) => {
+export const onCreateNode: GatsbyNode["onCreateNode"] = ({
+	node, actions
+}: CreateNodeArgs<MDXNode>) => {
   const { createNodeField } = actions
   if (node.internal.type === `Mdx`) {
     createNodeField({
@@ -55,41 +83,7 @@ exports.onCreateNode = ({ node, actions }: CreateNodeArgs<MDXNode>) => {
   }
 }
 
-exports.createPages = async ({ actions, graphql, reporter }: CreatePagesArgs) => {
-	const postTemplatePath = path.resolve(`./src/templates/PostTemplate.tsx`)
-	const { createPage } = actions
-
-	const { data = dummy, errors } = await graphql<QueryResult>(`
-		{
-			allMdx(
-				sort: { frontmatter: { date: DESC } },
-				limit: 100
-			) {
-				nodes {
-					frontmatter {
-						slug
-					}
-				}
-			}
-		}
-	`)
-
-	if (errors) {
-		reporter.panicOnBuild('Error loading MDX result', errors)
-	}
-
-	data!.allMdx.nodes.forEach((node) => {
-		createPage<PageContext>({
-			path: node.frontmatter.slug,
-			// PostTemplate.tsx에서 pageQuery로 path인 /slug에 해당하는 mdx를 불러올 거기 때문에 contentFilePath로 매칭해줄 필요없음
-			// component: `${postTemplatePath}?__contentFilePath=${node.internal.contentFilePath}`,
-			component: postTemplatePath,
-			context: {slug: node.frontmatter.slug},
-		})
-	})
-}
-
-exports.onCreateWebpackConfig = ({ stage, actions }) => {
+export const onCreateWebpackConfig: GatsbyNode["onCreateWebpackConfig"] = ({ stage, actions }) => {
   actions.setWebpackConfig({
     resolve: {
       modules: [path.resolve(__dirname, "src"), "node_modules"],
@@ -104,5 +98,15 @@ exports.onCreateWebpackConfig = ({ stage, actions }) => {
 				"@templates": path.resolve(__dirname, "./src/templates"),
 			},
     },
+		// type check 에러를 너무 띄워서 잠시 없애둠.
+		// module: {
+		// 	rules: [
+		// 		{
+		// 			test: /\.tsx?$/i,
+		// 			exclude: /node_modules/,
+		// 			use: ['ts-loader'],
+		// 		},
+		// 	],
+		// },
   })
 }

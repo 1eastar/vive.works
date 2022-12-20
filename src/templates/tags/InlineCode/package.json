@@ -1,0 +1,6 @@
+{
+  "name": "InlineCode",
+  "version": "0.0.0",
+  "private": true,
+  "main": "InlineCode.tsx"
+}

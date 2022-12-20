@@ -1,17 +1,10 @@
-/**
- * Layout component that queries for data
- * with Gatsby's useStaticQuery component
- *
- * See: https://www.gatsbyjs.com/docs/how-to/querying-data/use-static-query/
- */
-
 /* External */
-import * as React from 'react'
 import { useStaticQuery, graphql } from 'gatsby'
 
 /* Internal */
 import Header from '@components/Header'
 import * as styles from './Layout.scss'
+// 스타일 import 관련 warning이 계속 뜸;;;
 
 const Layout = ({ children }) => {
 	const data = useStaticQuery(graphql`
@@ -52,5 +45,3 @@ const Layout = ({ children }) => {
 }
 
 export default Layout
-
-// postTemplate 랑 page들에 입힐 layout

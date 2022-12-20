@@ -1,7 +1,7 @@
-import styles from './Paragraph.scss'
+import * as styles from './Paragraph.scss'
 
 interface ParagraphProps {
-  children: React.ReactNode
+  children: string
 }
 export default function Paragraph({
   children,

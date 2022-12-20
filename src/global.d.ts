@@ -1,4 +1,4 @@
 declare module '*.scss' {
-  const classes: { readonly [className: string]: string }
+  const classes: { [className: string]: string }
   export = classes
 }
