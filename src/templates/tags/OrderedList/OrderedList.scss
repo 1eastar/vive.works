@@ -1,0 +1,11 @@
+.orderedList {
+  list-style: decimal;
+  list-style-position: inside;
+  color: var(--text-color-primary);
+  margin: 10px 15px;
+
+  li {
+    line-height: 1.5;
+    color: inherit;
+  }
+}
