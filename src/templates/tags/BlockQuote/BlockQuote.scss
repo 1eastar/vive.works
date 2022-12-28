@@ -1,0 +1,23 @@
+
+
+.wrapper {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+
+  .quoteLine {
+    align-self: stretch;
+    width: 3px;
+    background-color: var(--grey500);
+    margin: 0 5px;
+  }
+
+  .quote {
+    margin-left: 10px;
+
+    p {
+      margin: 0;
+      color: var(--grey600);
+    }
+  }
+}

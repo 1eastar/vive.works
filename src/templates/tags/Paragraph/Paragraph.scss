@@ -1,3 +1,10 @@
+@import '@styles/global.scss';
+
 .pwrapper {
-  color: grey;
+  color: var(--text-color-primary);
+  font-size: $font-size-s;
+  line-height: 1.6;
+  margin: 10px 0;
+  letter-spacing: 0.5px;
+  overflow-wrap: break-word;
 }

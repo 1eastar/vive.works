@@ -1,13 +1,14 @@
-@import '@styles/_variables.scss';
+@import '@styles/global.scss';
 
 .inlineCode {
   display: inline-block;
   padding: 0 7px;
   margin: 0 2px;
-  background-color: var(--black5);
-  font-family: 'FiraCode';
-  font-size: 13px;
-  line-height: 22px;
-  color: var(--inline-code-text);
+  background-color: var(--code-bg-color);
+  font-family: $content-font;
+  font-size: $font-size-xs;
+  line-height: 20px;
+  color: var(--highlight-color-orange);
   border-radius: 5px;
+  letter-spacing: 0.5px;
 }

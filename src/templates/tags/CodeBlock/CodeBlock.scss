@@ -1,0 +1,32 @@
+@import '@styles/global.scss';
+
+.codeContainer {
+  margin: 10px;
+  height: auto;
+  width: auto;
+  overflow-x: scroll;
+  border-radius: 8px;
+  padding: 10px 6px;
+  letter-spacing: 0.7px;
+
+  .codeLine {
+    display: table-row;
+    line-height: 1.3em;
+    height: 1.3em;
+
+    .number {
+      text-align: right;
+      display: table-cell;
+      color: var(--grey500);
+      opacity: 0.5;
+      padding-right: 10px;
+      user-select: none;
+      font-family: $main-font;
+      letter-spacing: -2px;
+    }
+
+    .code {
+      display: table-cell;
+    }
+  }
+}

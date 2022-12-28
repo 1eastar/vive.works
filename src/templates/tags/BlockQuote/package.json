@@ -1,0 +1,6 @@
+{
+  "name": "BlockQuote",
+  "version": "0.0.0",
+  "private": true,
+  "main": "BlockQuote.tsx"
+}
