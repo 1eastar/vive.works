@@ -1,0 +1,51 @@
+@import '@styles/global.scss';
+
+.postHeadContainer {
+  width: 100%;
+  height: auto;
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  cursor: default;
+  
+  .postTitle {
+    font-family: $main-font;
+    font-weight: bold;
+    font-size: $font-size-title;
+    text-align: right;
+    color: var(--text-color-primary);
+    padding: 10px 0;
+  }
+
+  .postInfo{
+    display: flex;
+    font-family: $main-font;
+    font-size: $font-size-m;
+    text-align: right;
+    vertical-align: middle;
+    color: var(--text-color-primary-30);
+    padding: 10px 0;
+  }
+
+  .postTagsWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    
+    .postTags {
+      display: flex;
+      flex-direction: row;
+      padding: 10px 0;
+    }
+
+    .divider {
+      width: calc(100% - 8px);
+      height: 7px;
+      background: var(--bg-color-primary-70);
+      border-radius: 2px;
+      margin: 10px 0;
+    }
+  }
+
+}

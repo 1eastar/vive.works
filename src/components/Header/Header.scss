@@ -1,0 +1,60 @@
+@import '@styles/global.scss';
+@import '@styles/color.scss';
+
+.container {
+  position: fixed;
+  top: 0;
+  width: 100vw;
+  height: 22px;
+  border-bottom: 1px solid var(--mac-header-border-color);
+  background: var(--mac-header-bg-color);
+  z-index: $header-z-index;
+
+  .wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 100%;
+    padding: 0 10px;
+  
+    .buttons {
+      height: 100%;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+
+      .red {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background-color: var(--mac-header-red);
+      }
+
+      .yellow {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background-color: var(--mac-header-yellow);
+      }
+
+      .green {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background-color: var(--mac-header-green);
+      }
+    }
+
+    .viveLog {
+      text-decoration: none;
+      color: var(--mac-header-text-color);
+      font-size: $font-size-xxs;
+      justify-self: flex-start;
+    }
+
+    .dummy {
+      width: 55px;
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "PostHead",
+  "version": "0.0.0",
+  "private": true,
+  "main": "PostHead.tsx"
+}
