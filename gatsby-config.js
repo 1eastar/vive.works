@@ -4,8 +4,9 @@
  * See: https://www.gatsbyjs.com/docs/reference/config-files/gatsby-config/
  */
 
-const path = require('path');
+const path = require('path')
 
+require("dotenv").config()
 /**
  * @type {import('gatsby').GatsbyConfig}
  */
@@ -64,7 +65,6 @@ module.exports = {
             },
           },
 				],
-				extensions: [`.md`, `.mdx`],
 			},
 		},
     {
@@ -79,13 +79,26 @@ module.exports = {
 		`babel-preset-gatsby`,
 		{
       resolve: `gatsby-plugin-typescript`,
-      // options: {
-      //   isTSX: true, // defaults to false
-      //   allExtensions: true, // defaults to false
-      // },
+      options: {
+        isTSX: true, // defaults to false
+        allExtensions: true, // defaults to false
+      },
     },
+		{
+      resolve: `gatsby-plugin-algolia`,
+      options: {
+        appId: process.env.GATSBY_ALGOLIA_APP_ID,
+        apiKey: process.env.ALGOLIA_ADMIN_KEY,
+        queries: require("./src/utils/algolia.utils.ts")
+      },
+    },
+		{
+			resolve: "gatsby-plugin-react-svg",
+			options: {
+				rule: {
+					include: /icons/ 
+				}
+			}
+		},
 	],
 }
-
-// inline code에 scss 안 먹는 거 고쳐야 함.
-// codeblock 따로 만들거면 다로 만들어야 함.

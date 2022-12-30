@@ -4,42 +4,13 @@ import path from 'path'
 import readingTime from 'reading-time'
 
 /* Internal */
-
-// require('ts-node').register()
-
-type PageContext = {
-	slug: string
-}
-
-interface MDXMetadata {
-	slug: string
-	id: string
-	title: string
-	description: string
-	author: string
-	date: string
-	image: string
-}
-
-type MDXNode = {
-	body: string
-	frontmatter: Pick<MDXMetadata, "slug">
-	internal: {
-		contentFilePath: string
-	}
-}
-
-interface QueryResult {
-	allMdx: {
-		nodes: MDXNode[]
-	}
-}
+import { AllMDXQueryResult, MDX, PageContext } from "@commons/types/QueryType"
 
 export const createPages: GatsbyNode["createPages"] = async ({ actions, graphql, reporter }) => {
 	const postTemplatePath = path.resolve(`./src/templates/PostTemplate.tsx`)
 	const { createPage } = actions
 
-	const { data, errors } = await graphql<QueryResult>(`
+	const { data, errors } = await graphql<AllMDXQueryResult>(`
 		{
 			allMdx(
 				sort: { frontmatter: { date: DESC } },
@@ -72,7 +43,7 @@ export const createPages: GatsbyNode["createPages"] = async ({ actions, graphql,
 
 export const onCreateNode: GatsbyNode["onCreateNode"] = ({
 	node, actions
-}: CreateNodeArgs<MDXNode>) => {
+}: CreateNodeArgs<MDX>) => {
   const { createNodeField } = actions
   if (node.internal.type === `Mdx`) {
     createNodeField({
@@ -96,17 +67,18 @@ export const onCreateWebpackConfig: GatsbyNode["onCreateWebpackConfig"] = ({ sta
 				"@statics": path.resolve(__dirname, "./src/statics"),
 				"@styles": path.resolve(__dirname, "./src/styles"),
 				"@templates": path.resolve(__dirname, "./src/templates"),
+				"@lib": path.resolve(__dirname, "./src/lib"),
+				"@utils": path.resolve(__dirname, "./src/utils"),
 			},
     },
-		// type check 에러를 너무 띄워서 잠시 없애둠.
-		// module: {
-		// 	rules: [
-		// 		{
-		// 			test: /\.tsx?$/i,
-		// 			exclude: /node_modules/,
-		// 			use: ['ts-loader'],
-		// 		},
-		// 	],
-		// },
+		module: {
+			rules: [
+				{
+					test: /\.svg$/,
+					exclude: /node_modules/,
+					loader: 'svg-react-loader',
+				}
+			],
+		},
   })
 }
