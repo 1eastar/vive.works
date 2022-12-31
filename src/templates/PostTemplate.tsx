@@ -4,50 +4,34 @@ import { MDXProvider } from '@mdx-js/react'
 import type { MDXComponents } from 'mdx/types'
 
 /* Internal */
+import { PostTemplateQueryResult } from '@commons/types/QueryType'
 import Seo from '@components/Seo'
 import Layout from '@components/Layout'
+import PostHead from '@components/PostHead/PostHead'
+import Utterance from '@components/Utterance/Utterance'
 import * as Tags from './tags'
+import * as styles from './PostTemplate.scss'
 
-const tagComponents = {
+const tagComponents: MDXComponents = {
   p: Tags.Paragraph,
   h1: Tags.Heading,
+  h2: Tags.Heading2,
+  h3: Tags.Heading3,
   code: Tags.InlineCode,
-
-  h2: props => props.children,
-  strong: props => props.children,
-  em: props => props.children,
-  blockquote: props => props.children,
-  hr: props => props.children,
-  a: props => props.children,
-  ol: props => props.children,
-  ul: props => props.children,
-  pre: props => props.children,
-  ...Tags,
-} as MDXComponents
-
-interface pageQueryResult {
-  data: {
-    mdx: {
-      body: any
-      frontmatter: {
-        slug: string
-        title: string
-        description: string
-        author: string
-        date: string
-        image: string
-      }
-      htmlAst: any
-      fields: {
-        timeToRead: {
-          text: string
-        }
-      }
-    }
-  }
+  strong: Tags.Bold,
+  em: Tags.Italic,
+  hr: Tags.Horizon,
+  a: Tags.Anchor,
+  blockquote: Tags.BlockQuote,
+  ol: Tags.OrderedList,
+  ul: Tags.UnorderedList,
+  pre: Tags.CodeBlock,
+  // ...Tags,
 }
 
-type PostTemplateProps = pageQueryResult & { children: any }
+interface PostTemplateProps extends PostTemplateQueryResult {
+  children: any
+}
     
 const PostTemplate = ({ data, children }: PostTemplateProps) => {
   const { mdx } = data
@@ -60,6 +44,7 @@ const PostTemplate = ({ data, children }: PostTemplateProps) => {
       author,
       date,
       image,
+      tags,
     },
     htmlAst,
     fields: {
@@ -68,7 +53,7 @@ const PostTemplate = ({ data, children }: PostTemplateProps) => {
       },
     },
   } = mdx
-console.log(data, 1111, children)
+
   return (
     <Layout>
       <Seo
@@ -78,9 +63,16 @@ console.log(data, 1111, children)
         date={date}
         image={image}
       />
-      <MDXProvider components={tagComponents}>
-        {children}
-      </MDXProvider>
+      <PostHead 
+        {...mdx.frontmatter}
+        timeToRead={text}
+      />
+      <div className={styles.MDXcontent}>
+        <MDXProvider components={tagComponents}>
+          {children}
+        </MDXProvider>
+        <Utterance />
+      </div>
     </Layout>
   )
 }
@@ -97,6 +89,7 @@ export const pageQuery = graphql`
         author
         date(formatString: "YYYY-M-DD")
         image
+        tags
       }
       fields {
         timeToRead {
