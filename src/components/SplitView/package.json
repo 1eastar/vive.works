@@ -1,0 +1,6 @@
+{
+  "name": "SplitView",
+  "version": "0.0.0",
+  "private": true,
+  "main": "SplitView.tsx"
+}

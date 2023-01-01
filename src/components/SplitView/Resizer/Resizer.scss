@@ -1,0 +1,17 @@
+.resizer {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  transition: background-color 0.15s ease-in-out;
+  will-change: background-color;
+
+  &:hover {
+    background-color: var(--split-view-resizer-color);
+  }
+
+  &.dragging {
+    background-color: var(--split-view-resizer-color);
+  }
+}

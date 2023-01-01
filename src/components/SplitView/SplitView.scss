@@ -1,0 +1,16 @@
+.viewWrapper {
+  display: flex;
+  flex-direction: row;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow-y: hidden;
+
+  &.dragging {
+    user-select: none;
+  }
+
+  .resizer {
+    
+  }
+}
