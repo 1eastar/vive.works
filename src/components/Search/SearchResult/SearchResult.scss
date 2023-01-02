@@ -1,0 +1,9 @@
+@import '@styles/global.scss';
+
+.noPost {
+  width: 100%;
+  height: auto;
+  text-align: center;
+  color: var(--grey500);
+  font-size: $font-size-m;
+}

@@ -1,0 +1,51 @@
+@import '@styles/global.scss';
+
+.hitContainer {
+  min-height: 100px;
+  border-radius: 12px;
+  font-family: $main-font;
+  color: var(--text-color-primary);
+  min-height: 140px;
+  margin: 16px 0;
+  padding: 0 15px;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+
+  &:hover {
+    box-shadow: 0 3px 40px var(--black15);
+    transform: scale(1.03);
+
+    @media (prefers-color-scheme: dark) {
+      box-shadow: 0 5px 40px var(--black60);
+    }
+  }
+
+  .date {
+    font-size: $font-size-xxs;
+    color: var(--grey500);
+    padding-top: 15px;
+  }
+
+  .title{
+    font-size: $font-size-xxl;
+    font-weight: bold;
+    padding-top: 10px;
+  }
+
+  .description {
+    font-size: $font-size-m;
+    padding-top: 10px;
+  }
+
+  .tags {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 15px 0;
+
+    .tag {
+      height: 24px;
+      font-size: 14px;
+    }
+  }
+}
