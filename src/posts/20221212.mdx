@@ -6,17 +6,67 @@ description: "first description"
 author: "Vive Kang"
 date: "2022-12-12"
 image: "image url...."
+tags: ["gatsby", "blog"]
 
 ---
   
 # Hi!
 
+```jsx
+**// pages/index.js**
+function Page(){
+	const { data } = useSWR(['auth', 1], fetcher) ***//['auth',1]이라는 key를 가진 SWR***
+	return(
+		<div>....</div>
+	)
+}
+...
 
+***/** ip,query등 브라우저에서 함께 전송된 정보가 담긴 context */***
+export const getServerSideProps = async (context) => {
+***// ex) www.domain.com/?token=abc 주소로 접근시 토근으로 로그인을 요청하고, 정보를 받는다*** 
+	const user = await fetchAuth(context.query.token)
+  return {
+    props: {
+      fallback:{
+				***// fallback에 SWR키를 이용해 조회한 데이터를 _App으로 전달***
+				[unstable_serialize(['auth',1])]: user, 
+			},
+    },
+  };
+};
+```
+
+test
+asdfa**bold test**asdfasdf
+sgsgsga _italic_ asdfasfasf
+
+---
+
+> quote
+
+asdfsadasdfasfsd
+
+> multi
+> quote
+
+* 1aasdfsa
+* 2asdfasf
+* 3asdfasf
+
+1. 1111111
+2. 2222222
+3. 3333333
+
+a test [anchor test](https://naver.com)zzzzzzzz
 연대 종강 시계.....
 
+![alt image](../statics/images/gatsby-icon.png)
 
 
 # gatsby 블로그 만들 때 헤맸던 것.
+헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것헤맸던 것
+
 ## gatsby HEAD api
 gatsby 버전 5?부터 HEAD api라는 것이 생겨서 사용해볼라햇는데, page에만 사용가능해서 내 경우 사용할 수 없었음.
 react-helmet을 이용해서 title, meta tag를 넣어주고 gatsby-plugin-helmet 을 추가해줘서 seo가 제대로 될 수 있도록 했다.
@@ -24,7 +74,7 @@ react-helmet을 이용해서 title, meta tag를 넣어주고 gatsby-plugin-helme
 
 ## MDX setting
 gatsby 버전 3?4?부터 MDXRenderer가 사라졌고, 그 대체제로 `?__contentFilePath` 라는 게 생겼다.
-```
+```js
 component: `${postTemplatePath}?__contentFilePath=${node.internal.contentFilePath}`
 ```
 
@@ -33,7 +83,22 @@ postTemplatePath만 있으면 오류가 안 뜨지만 mdx가 그냥 string 형�
 
 근데 저 `?__contentFilePath`를 붙이는 순간 에러가 떴다.
 
-```
+```null
+Invalid AST. Parsed source code did not 'return' valid outputInvalid AST.
+Invalid AST. Parsed source code did not return valid outputParsed source code did not return valid outputInvalid AST. Parsed source code did not return valid outputInvalid AST. Parsed source code did not return valid outputInvalid AST. Parsed source code did not return valid outputInvalid AST. Parsed source code did not return valid output
+Invalid AST. Parsed source code did not return valid output
+Invalid AST. Parsed source code did not return valid output
+Invalid AST. Parsed source code did not return valid output
+Invalid AST. Parsed source code did not return valid output
+Invalid AST. Parsed source code did not return valid output
+validv
+validInvalid AST. Parsed source code did not return valid output
+Invalid AST. Parsed source code did not return valid output
+Invalid AST. Parsed source code did not return valid output
+validInvalidv
+validInvalid AST. Parsed source code did not return valid output
+validInvalidInvalid AST. Parsed source code did not return valid output
+Vivev
 Invalid AST. Parsed source code did not return valid output
 ```
 
@@ -55,7 +120,7 @@ onPluginInit 에서 error를 등록해줬으니 최소한 그 이후에 에러�
 그 다음으로 onCreateWebpackConfig 내부 코드를 보는데 조금 보다보니 '아 얘구나..' 하고 느낌이 딱 왔다.
 `actions.setWebpackConfig({...})` rules에 두가지 rule이 있었는데, 하나는 test: /\.mdx?$/, 다른 하나는 test: /\.[tj]sx?$/, resourceQuery: /__contentFilePath=.+\.mdx?(&export=.*)?$/ 였고 두번째에는 `gatsby-layout-loader`라는 로더를 사용 중이었다.
 결국 gatsby-layout-loader.ts에서 
-```
+```js
 const tree = acorn.Parser.extend(JSX()).parse(source, {
       ecmaVersion: 2020,
       sourceType: `module`,
@@ -82,7 +147,7 @@ declard module "*.scss"
 },
 ```
 이렇게 세팅하고 나면 
-```js
+```jsx
 import * as styles from './InlineCode.scss'
 ...
 <pre className={styles.inlineCode}>
@@ -90,7 +155,6 @@ import * as styles from './InlineCode.scss'
 </pre>
 ```
 이렇게 사용 가능.
-"* as"를 안 붙이고도 사용할 수 있는데 세팅 어케함?
 
 
 
@@ -107,10 +171,14 @@ blah blah
 ```
 를 쓰든 똑같이 code 로 인식한다. 
 그에 대한 대응책으로 custom code components 에서 pre tag를 이용할 것을 권장하는데 그러면 아래처럼 잘 구현되긴 한다.
-(그냥 따로 만들어두는 게 더 커스터마이징하기 편할 것 같은데 아쉽다....)
+(합쳐봤자 어차피 다 따로 새로 만들 거 같은데 굳이 왜....)
 
 
 
+## css transform, transition
+translate은 transform에서 사용할 수 있는 함수 중 하나. transform: translateX(5px);
+
+## VAC pattern
 
 
 ## babel, webpack
@@ -142,7 +210,7 @@ tsconfig.js 의 용도???????
 
 
 
-```
+```js
 // webpack.config.js
 module.exports = {
   entry: "./src/before.js",
@@ -167,3 +235,20 @@ module.exports = {
 };
 ```
 이런 식으로 babel은 webpack 자체에 포함시켜 사용할 수도 있다.
+
+
+## babel to SWC, webpack to spack(swcpack in future)
+https://swc.rs/docs/usage/bundling (spack)
+
+
+
+
+
+// import scss에서 "* as" 를 안 붙이고도 사용할 수 있는데 세팅 어케함?
+// codeblock 따로 만들거면 새로 만들어야 함.
+// image 컴포넌트는 클릭 시 이미지 확대, 다시 클릭 or ESC 누를 시 원상 복귀. 뒷배경은 살짝 blur.
+// algoli-queries.ts 에서 export default는 에러가 뜨고 commonjs 방식을 이용해서 오류가 안 뜸. Tags index.tx에는 잘 되는데 무슨 차이?
+
+---
+
+피드백은 언제나 환영입니다.
