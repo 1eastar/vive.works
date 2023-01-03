@@ -1,3 +1,51 @@
-.container {
-  
+@import '@styles/global.scss';
+@import '@styles/mixin.scss';
+
+.panelContainer {
+  @include ellipsis();
+  overflow-y: scroll;
+  background-color: var(--left-panel-bg-color);
+  height: 100vh;
+
+  &> * {
+    @media (max-width: 800px) {
+      display: none;
+    }
+  }
+}
+
+.mainContainer {
+  overflow-y: scroll;
+  // width: calc(100vw - 300px);
+  height: 100vh;
+  background-color: var(--right-panel-bg-color);
+  box-shadow: 0px 4px 4px var(--black20);
+
+  @media (max-width: 800px) {
+    width: 100%;
+    padding: 10px;
+  }
+
+  .main {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 150px 10px 20px;
+    min-height: calc(100% - 56px);  // footer height
+
+    @media (max-width: 800px) {
+      max-width: fit-content;
+    }
+  }
+
+  .footer {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px 0;
+    text-align: center;
+    color: var(--text-color-primary);
+
+    @media (max-width: 800px) {
+      max-width: fit-content;
+    }
+  }
 }
