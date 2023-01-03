@@ -1,0 +1,51 @@
+@import '@styles/global.scss';
+
+.TOCContainer {
+  padding: 22px 10px 0;
+  height: 100%;
+
+  .header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 10px;
+
+    .title {
+      color: var(--text-color-primary);
+      font-weight: bold;
+      font-size: $font-size-xl;
+      margin-right: auto;
+      cursor: pointer;
+    }
+    
+    .icon {
+      padding: 0 3px;
+
+      svg {
+        border-radius: 50%;
+        transition: box-shadow 0.1s ease-in-out;
+        cursor: pointer;
+
+        &:hover {
+          box-shadow: 0 1px 20px var(--black25);
+        }
+
+        @media (prefers-color-scheme: dark) {
+          path {
+            fill: #E9EBED;
+          }
+        }
+      }
+    }
+  }
+
+  .TOCItemTitle {
+    font-weight: bold;
+    font-size: $font-size-xxs;
+    color: var(--text-color-primary-30);
+    letter-spacing: 0.35em;
+    user-select: none;
+    padding: 10px;
+  }
+}

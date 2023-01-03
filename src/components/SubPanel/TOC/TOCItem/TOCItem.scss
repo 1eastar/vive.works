@@ -1,0 +1,19 @@
+@import '@styles/mixin.scss';
+
+.TOCItem {
+  @include ellipsis();
+  transition: background-color 0.1s ease-in-out;
+  padding: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--left-panel-item-text-color);
+
+  &.current {
+    background-color: var(--left-panel-hover-color);
+    font-weight: bold;
+  }
+
+  &:hover {
+    background-color: var(--left-panel-hover-color);
+  }
+}

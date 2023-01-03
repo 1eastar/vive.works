@@ -1,0 +1,6 @@
+{
+  "name": "TagItem",
+  "version": "0.0.0",
+  "private": true,
+  "main": "TagItem.tsx"
+}
