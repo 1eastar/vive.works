@@ -10,8 +10,10 @@ module.exports = function(api) {
       {
         reactRuntime: 'automatic'
       },
+      'es2015',
     ],
-    `@babel/preset-typescript`,
+    // gatsby-plugin-typescript 에 포함되어 있음.
+    // `@babel/preset-typescript`
   ]
 
   const plugins = []
