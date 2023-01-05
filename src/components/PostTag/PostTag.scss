@@ -1,0 +1,33 @@
+@import '@styles/global.scss';
+
+.tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: auto;
+  height: 28px;
+  margin: 0 8px;
+  padding: 0 5px;
+  background-color: var(--bg-color-primary);
+  box-shadow: 0.5px 0.5px 1px var(--black20);
+  border-radius: 8px;
+  font-family: $content-font;
+  font-size: $font-size-s;
+  color: var(--highlight-color-green);
+
+  &.clickEnabled {
+    transition: box-shadow 0.1s ease-in-out;
+    cursor: pointer;
+  
+    &:hover {
+      box-shadow: 0px 2px 10px var(--black20);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      &:hover {
+        box-shadow: 0px 1px 10px var(--black60), 0px 1px 10px var(--black60);
+      }
+    }
+  }
+}
