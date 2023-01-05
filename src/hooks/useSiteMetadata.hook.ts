@@ -13,7 +13,7 @@ export interface SiteMetadataQueryResult {
   }
 }
 
-export const useSiteMetadata = () => {
+export function useSiteMetadata() {
   const data = useStaticQuery<SiteMetadataQueryResult>(
     graphql`
       query {
