@@ -1,34 +1,24 @@
 /* External */
-import { StaticImage } from "gatsby-plugin-image"
 
 /* Internal */
-import Layout from "../components/Layout/Layout"
-import Seo from "../components/Seo/Seo"
+import Search from "@components/Search/Search"
+import Layout from "@components/Layout/Layout"
+import Seo from "@components/Seo/Seo"
+import { searchIndex } from "@components/Search/Search.constant"
 
-const IndexPage = () => (
-  <Layout>
-    {/* <div className={styles.textCenter}> */}
-      <StaticImage
-        src="../statics/images/example.png"
-        loading="eager"
-        width={64}
-        quality={95}
-        formats={["auto", "webp", "avif"]}
-        alt=""
-        style={{ marginBottom: `var(--space-3)` }}
-      />
-      <h1>
-        Welcome to <b>Gatsby!</b>
-      </h1>
-    {/* </div> */}
-  </Layout>
-)
+const IndexPage = () => {
 
-/**
- * Head export to define metadata for the page
- *
- * See: https://www.gatsbyjs.com/docs/reference/built-in-components/gatsby-head/
- */
+  return (
+    <Layout>
+      {/* <div className={styles.textCenter}> */}
+        <Search
+          index={searchIndex}
+        />
+      {/* </div> */}
+    </Layout>
+  )
+}
+
 export const Head = () => <Seo title="Home" />
 
 export default IndexPage
