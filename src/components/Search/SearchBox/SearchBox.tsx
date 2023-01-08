@@ -4,7 +4,7 @@ import { connectSearchBox } from "react-instantsearch-dom"
 import classNames from 'classnames'
 
 /* Internal */
-import { getQueryParamValue } from "@utils/browser.utils"
+import { getQueryParamValue, isBrowser } from "@utils/browser.utils"
 import CloseIcon from '-!svg-react-loader!@statics/icons/close.svg'
 import * as styles from './SearchBox.scss'
 
@@ -17,6 +17,8 @@ function SearchBox({
   currentRefinement,
   refine,
 }: SearchBoxProps) {
+  const queryParams = isBrowser ? window.location.search : ''
+
   const [focused, setFocused] = useState(false)
 
   const clearQuery = useCallback(() => {
@@ -24,11 +26,11 @@ function SearchBox({
   }, [refine])
 
   useEffect(() => {
-    const tag = getQueryParamValue(window.location.search, 'tag')
+    const tag = getQueryParamValue(queryParams, 'tag')
     
     if (tag) refine(tag) 
     else clearQuery()
-  }, [window.location.search, clearQuery, refine])
+  }, [queryParams, clearQuery, refine])
 
   const onChangeQuery = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     refine(e.target.value)

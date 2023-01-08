@@ -3,8 +3,9 @@ import React, {
   MouseEvent,
   MouseEventHandler,
   useCallback,
+  useEffect,
   useRef,
-  useState
+  useState,
 } from "react"
 import classNames from "classnames"
 
@@ -15,6 +16,9 @@ import Resizer from "./Resizer"
 import {
   MAX_SUB_VIEW_SIZE,
   MIN_SUB_VIEW_SIZE,
+  INITIAL_SIZES,
+  RESIZER_WIDTH,
+  MOBILE_SCREEN_MAX_WIDTH,
 } from "./SplitView.constant"
 import * as styles from './SplitView.scss'
 
@@ -38,12 +42,14 @@ function SplitView({
   const cachedSizes = useRef<number[]>([])
   const [wrapperRect, setWrapperRect] = useState({})
   const [isDragging, setIsDragging] = useState(false)
-  const [sizes, setSizes] = useState<number[]>(() => {
+  const [sizes, setSizes] = useState<number[]>(INITIAL_SIZES)
+
+  useEffect(() => {
+    // INITIAL_SIZES는 flick 방지를 위한 임시 sizes
     if (isBrowser) {
-      return [initialResizerPos, document.documentElement.clientWidth - initialResizerPos]
+      setSizes([initialResizerPos, document.documentElement.clientWidth - initialResizerPos])
     }
-    return [300, 800]
-  })
+  }, [])
 
   const wrapperRef = useResizeObserver((entry: ResizeObserverEntry) => {
     setWrapperRect(entry.contentRect ?? {})
@@ -61,7 +67,7 @@ function SplitView({
     onDragEnd?.(e)
   }, [onDragEnd, sizes])
 
-  const _onDragging: MouseEventHandler<HTMLDivElement> = useCallback((e) => {
+  const _onDragging: MouseEventHandler<HTMLDivElement> = (e) => {
     const curPositionX = e.pageX
     const diffX = curPositionX - sizes[0]
 
@@ -79,7 +85,8 @@ function SplitView({
     }
 
     setSizes(nextSizes)
-  }, [sizes])
+    onDragging?.(nextSizes)
+  }
 
   /* for performance, use 'sizesForPerformance' instead of 'sizes' */
   // const sizesForPerformance = isDragging ? cachedSizes.current : sizes
@@ -90,7 +97,7 @@ function SplitView({
     })
   ), [sizes])
 
-  if (wrapperRect['width'] <= 800) {
+  if (wrapperRect['width'] <= MOBILE_SCREEN_MAX_WIDTH) {
     return children[1]
 }
 
@@ -109,7 +116,7 @@ function SplitView({
         onDragEnd={_onDragEnd}
         onDragging={_onDragging}
         style={{
-          transform: `translateX(${sizes[0] - 3}px)`,
+          transform: `translateX(${(sizes[0]) - RESIZER_WIDTH / 2}px)`,
         }}
       />
     </div>
