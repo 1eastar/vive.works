@@ -26,6 +26,12 @@
     vertical-align: middle;
     color: var(--text-color-primary-30);
     padding: 10px 0;
+
+    svg {
+      rect, path {
+        stroke: var(--text-color-primary-30);
+      }
+    }
   }
 
   .postTagsWrapper {

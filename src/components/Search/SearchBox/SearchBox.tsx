@@ -26,7 +26,7 @@ function SearchBox({
   useEffect(() => {
     const tag = getQueryParamValue(window.location.search, 'tag')
     
-    if (!!tag) refine(tag) 
+    if (tag) refine(tag) 
     else clearQuery()
   }, [window.location.search, clearQuery, refine])
 

@@ -12,7 +12,7 @@ function TagItem(tag: Tag) {
   const isCurrentTag = useMemo(() => {
     const currentTagText = getQueryParamValue(window.location.search, 'tag')
 
-    if (!!currentTagText) {
+    if (currentTagText) {
       return tag.text === currentTagText.replace('#', '').trim()
     } else {
       return tag.text === 'All'

@@ -13,8 +13,8 @@ export interface Frontmatter {
   tags: string[]
 }
 
-// NOTE: gatsby 내장 interface인 CreateNodeArgs에서 사용하려면 Record<string, unknown>를
-//       만족해야 하기 때문에 interface가 아닌 type으로 정의
+// NOTE: gatsby 내장 interface인 CreateNodeArgs가 'CreateNodeArgs<T extends Record<string, unknown>>'
+//       타입이기 때문에 Record<string, unknown>을 만족시키기 위해 interface가 아닌 type으로 정의
 //       (interface에 index signature '[key: string]: unknown'를 추가해줘도 됨)
 export type MDX = {
   body: any

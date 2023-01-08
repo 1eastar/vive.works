@@ -7,16 +7,18 @@ import React, {
   useState
 } from "react"
 import classNames from "classnames"
-import noop from 'lodash/noop'
 
 /* Internal */
 import useResizeObserver from "@hooks/useResizeObserver.hook"
+import { isBrowser } from "@utils/browser.utils"
 import Resizer from "./Resizer"
 import {
   MAX_SUB_VIEW_SIZE,
   MIN_SUB_VIEW_SIZE,
 } from "./SplitView.constant"
 import * as styles from './SplitView.scss'
+
+const noop = () => {}
 
 interface SplitViewProps {
   children: JSX.Element[]
@@ -36,7 +38,12 @@ function SplitView({
   const cachedSizes = useRef<number[]>([])
   const [wrapperRect, setWrapperRect] = useState({})
   const [isDragging, setIsDragging] = useState(false)
-  const [sizes, setSizes] = useState<number[]>([initialResizerPos, document.documentElement.clientWidth - initialResizerPos])
+  const [sizes, setSizes] = useState<number[]>(() => {
+    if (isBrowser) {
+      return [initialResizerPos, document.documentElement.clientWidth - initialResizerPos]
+    }
+    return [300, 800]
+  })
 
   const wrapperRef = useResizeObserver((entry: ResizeObserverEntry) => {
     setWrapperRect(entry.contentRect ?? {})

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 /* Internal */
 import { isBrowser } from '@utils/browser.utils'
 import Header from '@components/Header'
-import SplitView from '@components/SplitView/SplitView'
+import SplitView from '@components/SplitView'
 import SubPanel from '@components/SubPanel'
 import {
 	HOME_MAIN_PANEL_ANIMATION_VARIANTS,
@@ -65,7 +65,7 @@ function Layout({ children }: LayoutProps) {
 						{ children }
 					</motion.div>
 					<div className={styles.footer}>
-						© { new Date().getFullYear() } &middot; Vive kang &middot; All rights reserved
+						© { new Date().getFullYear() } &middot; Vive kang {/* &middot; All rights reserved */}
 					</div>
 				</div>
 			</SplitView>

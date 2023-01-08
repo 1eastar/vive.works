@@ -33,7 +33,7 @@
 
         @media (prefers-color-scheme: dark) {
           path {
-            fill: #E9EBED;
+            fill: var(--text-color-primary);
           }
         }
       }

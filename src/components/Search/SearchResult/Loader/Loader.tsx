@@ -1,4 +1,5 @@
 /* External */
+import React from 'react'
 import type { StateResultsProvided } from "react-instantsearch-core"
 import { connectStateResults } from "react-instantsearch-dom"
 

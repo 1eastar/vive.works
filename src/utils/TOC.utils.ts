@@ -5,7 +5,7 @@ import { isBrowser } from "./browser.utils"
 
 const slashRegex = /\//g
 
-export function findCurrentMDX({ allMdx }: TOCQueryResult): TOCQueryNode {
+export function findCurrentMDX({ allMdx }: TOCQueryResult): TOCQueryNode | undefined {
   const pathname = isBrowser ? window.location.pathname : ''
   
   return allMdx.nodes.find(Mdx =>

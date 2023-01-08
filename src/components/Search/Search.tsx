@@ -30,7 +30,6 @@ function Search({
     <InstantSearch
       searchClient={searchClient}
       indexName={index.name}
-      stalledSearchDelay={200}
     >
       <SearchBox />
       <SearchResult />

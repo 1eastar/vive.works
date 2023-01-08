@@ -1,20 +1,15 @@
 /* External */
 
 /* Internal */
-import Search from "@components/Search/Search"
-import Layout from "@components/Layout/Layout"
-import Seo from "@components/Seo/Seo"
+import Search from "@components/Search"
+import Layout from "@components/Layout"
+import Seo from "@components/Seo"
 import { searchIndex } from "@components/Search/Search.constant"
 
 const IndexPage = () => {
-
   return (
     <Layout>
-      {/* <div className={styles.textCenter}> */}
-        <Search
-          index={searchIndex}
-        />
-      {/* </div> */}
+      <Search index={searchIndex}/>
     </Layout>
   )
 }

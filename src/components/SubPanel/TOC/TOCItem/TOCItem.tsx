@@ -31,7 +31,8 @@ function TOCItem({
       })}
       href={`#${item.title}`}
     >
-      { "  ".repeat(item.level).replace(/ /g, "\u00a0") } { item.title }
+      {/* NOTE: &nbsp; == "\u00a0" */}
+      { "\u00a0\u00a0".repeat(item.level) } { item.title }
     </a>
   )
 }

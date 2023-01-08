@@ -33,7 +33,7 @@ function TOC() {
 
   const TOCItemList = useMemo(() => {
     const currentMDX = findCurrentMDX(queryData)
-    return changeMdxToTOCItems(currentMDX)
+    return currentMDX ? changeMdxToTOCItems(currentMDX) : []
   }, [queryData])
 
   return (
@@ -50,6 +50,3 @@ function TOC() {
 }
 
 export default TOC
-
-// 페이지 이동 시 split view sizes 유지가 안 됨. -> 그냥 안 돼도 되게 냅둬도 될 것 같기도..?
-// 이상한 conflicting order 에러뜸 갑자기;;
