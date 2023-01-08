@@ -100,5 +100,12 @@ module.exports = {
 				}
 			}
 		},
+		`gatsby-plugin-sitemap`,
+		{
+      resolve: 'gatsby-plugin-robots-txt',
+      options: {
+        configFile: 'robots-txt.config.js'
+      }
+    },
 	],
 }
