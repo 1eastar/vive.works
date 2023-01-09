@@ -1,5 +1,5 @@
 /* External */
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { motion } from 'framer-motion'
 
 /* Internal */
@@ -24,7 +24,7 @@ function Layout({ children }: LayoutProps) {
   const pathname = isBrowser ? window.location.pathname : ''
 	
 	const [subPanelVariants, mainPanelVariants] = useMemo(() => {
-		if(pathname === '/') {
+		if (pathname === '/') {
 			return [
 				HOME_SUB_PANEL_ANIMATION_VARIANTS,
 				HOME_MAIN_PANEL_ANIMATION_VARIANTS,

@@ -1,10 +1,10 @@
 /* External */
-import { useMemo } from "react"
-import { connectHits } from "react-instantsearch-dom"
+import { useMemo } from 'react'
+import { connectHits } from 'react-instantsearch-dom'
 
 /* Internal */
-import Hit, { Hit as HitAttr } from "./Hit"
-import Loader from "./Loader"
+import Hit, { Hit as HitAttr } from './Hit'
+import Loader from './Loader'
 import * as styles from './SearchResult.scss'
 
 interface SearchResultProps {

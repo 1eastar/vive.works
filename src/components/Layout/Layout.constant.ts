@@ -23,7 +23,7 @@ export const HOME_MAIN_PANEL_ANIMATION_VARIANTS = {
 }
 
 export const MAIN_PANEL_TRANSITION = {
-  type: "spring",
+  type: 'spring',
   bounce: 0.1,
   duration: 0.5,
 }

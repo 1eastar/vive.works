@@ -11,12 +11,12 @@ type EntryContainerType = {
 
 function useIntersectionObserver(
   setIntersectTitle?: IntersectHandler,
-  options?: IntersectionObserverInit
+  options?: IntersectionObserverInit  // eslint-disable-line no-undef
 ) {
   const entryContainer = useRef<EntryContainerType>({})
   
   const callback = useCallback(
-    (entries: IntersectionObserverEntry[], observer: IntersectionObserver) => {
+    (entries: IntersectionObserverEntry[]) => {
       entries.forEach((entry) => {
         entryContainer.current[entry.target.id] = entry
       })

@@ -1,9 +1,9 @@
 /* External */
-import { useCallback } from "react"
-import { navigate } from "gatsby"
+import { useCallback } from 'react'
+import { navigate } from 'gatsby'
 
 /* Internal */
-import PostTag from "@components/PostTag"
+import PostTag from '@components/PostTag'
 import * as styles from './Hit.scss'
 
 export interface Hit {
@@ -25,7 +25,7 @@ export interface HitProps {
   hit: Hit
 }
 
-function Hit({ hit }: HitProps) {
+function HitComponent({ hit }: HitProps) {
 
   const onClickHit = useCallback(() => {
     navigate(hit.slug)
@@ -52,4 +52,4 @@ function Hit({ hit }: HitProps) {
   )
 }
 
-export default Hit
+export default HitComponent

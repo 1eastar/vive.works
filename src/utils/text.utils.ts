@@ -1,8 +1,8 @@
 export function copyToClipboard(text: string) {
-  const textarea = document.createElement("textarea")
+  const textarea = document.createElement('textarea')
   textarea.value = text
   textarea.setAttribute('readonly', '')
-  textarea.style.position = "fixed";
+  textarea.style.position = 'fixed';
   textarea.style.top = '0px';
   textarea.style.left = '-100px';
 

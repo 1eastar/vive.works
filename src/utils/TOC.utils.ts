@@ -1,7 +1,7 @@
 /* Internal */
-import { TOCQueryNode, TOCQueryResult } from "@commons/types/QueryType"
-import type { TOCItem } from "@components/SubPanel/TOC/TOCItem"
-import { isBrowser } from "./browser.utils"
+import { TOCQueryNode, TOCQueryResult } from '@commons/types/QueryType'
+import type { TOCItem } from '@components/SubPanel/TOC/TOCItem'
+import { isBrowser } from './browser.utils'
 
 const slashRegex = /\//g
 

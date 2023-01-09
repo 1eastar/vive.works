@@ -1,5 +1,5 @@
 /* External */
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from 'react';
 
 type CallbackProps = (
   entry?: ResizeObserverEntry,

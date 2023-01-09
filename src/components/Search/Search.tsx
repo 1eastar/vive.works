@@ -1,11 +1,11 @@
 /* External */
-import algoliasearch from "algoliasearch/lite"
-import { useMemo } from "react"
-import { InstantSearch } from "react-instantsearch-dom"
+import algoliasearch from 'algoliasearch/lite'
+import { useMemo } from 'react'
+import { InstantSearch } from 'react-instantsearch-dom'
 
 /* Internal */
-import SearchResult from "./SearchResult"
-import SearchBox from "./SearchBox"
+import SearchResult from './SearchResult'
+import SearchBox from './SearchBox'
 
 interface SearchProps {
   index: {

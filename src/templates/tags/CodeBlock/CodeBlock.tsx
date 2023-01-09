@@ -1,4 +1,5 @@
 /* External */
+import React from 'react'
 import classNames from 'classnames'
 import Highlight, { defaultProps } from 'prism-react-renderer'
 
@@ -27,13 +28,13 @@ export default function CodeBlock({ children }: CodeBlockProps) {
       {({ className, style, tokens, getLineProps, getTokenProps }) => (
         <pre className={classNames(styles.codeContainer, className)} style={style}>
           { tokens.map((line, index) => (
-            <div {...getLineProps({ line, key: index, className: styles.codeLine })}>
+            <div key={index} {...getLineProps({ line, className: styles.codeLine })}>
               <span className={styles.number}>
                 { index + 1 }
               </span>
               <span className={styles.code}>
                 { line.map((token, key) => (
-                  <span key={key} {...getTokenProps({token, key})} />
+                  <span key={key} {...getTokenProps({ token, key })} />
                 )) }
               </span>
             </div>

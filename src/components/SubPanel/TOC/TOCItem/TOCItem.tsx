@@ -1,6 +1,6 @@
 /* External */
-import { useMemo } from "react"
-import classNames from "classnames"
+import { useMemo } from 'react'
+import classNames from 'classnames'
 
 /* Internal */
 import * as styles from './TOCItem.scss'
@@ -15,7 +15,7 @@ interface TOCItemProps {
   currentHeading: Element
 }
 
-function TOCItem({
+function TOCItemComponent({
  item,
  currentHeading,
 }: TOCItemProps) {
@@ -32,9 +32,9 @@ function TOCItem({
       href={`#${item.title}`}
     >
       {/* NOTE: &nbsp; == "\u00a0" */}
-      { "\u00a0\u00a0".repeat(item.level) } { item.title }
+      { '\u00a0\u00a0'.repeat(item.level) } { item.title }
     </a>
   )
 }
 
-export default TOCItem
+export default TOCItemComponent

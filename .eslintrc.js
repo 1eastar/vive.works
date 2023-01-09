@@ -1,5 +1,8 @@
 module.exports = {
 	root: true,
+	globals: {
+		JSX: 'readonly',
+	},
 	extends: [
 		'plugin:@typescript-eslint/recommended',
 		'plugin:react/recommended',
@@ -14,6 +17,8 @@ module.exports = {
 		'space-in-parens': 'error',
 		'no-unexpected-multiline': 'off',
 		'react/react-in-jsx-scope': 'off',
+		'no-unused-vars': 'off',
+		'@typescript-eslint/no-unused-vars': 'error',
 		'@typescript-eslint/no-explicit-any': 'off',
 		'@typescript-eslint/no-non-null-assertion': 'off'
 	},

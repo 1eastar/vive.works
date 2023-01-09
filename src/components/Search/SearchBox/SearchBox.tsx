@@ -1,10 +1,10 @@
 /* External */
-import React, { useCallback, useEffect, useState } from "react"
-import { connectSearchBox } from "react-instantsearch-dom"
+import React, { useCallback, useEffect, useState } from 'react'
+import { connectSearchBox } from 'react-instantsearch-dom'
 import classNames from 'classnames'
 
 /* Internal */
-import { getQueryParamValue, isBrowser } from "@utils/browser.utils"
+import { getQueryParamValue, isBrowser } from '@utils/browser.utils'
 import CloseIcon from '-!svg-react-loader!@statics/icons/close.svg'
 import * as styles from './SearchBox.scss'
 

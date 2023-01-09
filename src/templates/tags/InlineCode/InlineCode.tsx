@@ -1,11 +1,11 @@
-// Ext
-import { ReactNode } from 'react'
+/* External */
+import React from 'react'
 
-// Int
+/* Internal */
 import * as styles from './InlineCode.scss'
 
 interface InlineCodeProps {
-  children: ReactNode
+  children: React.ReactNode
 }
 
 export default function InlineCode({

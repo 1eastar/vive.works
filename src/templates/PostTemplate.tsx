@@ -36,17 +36,13 @@ interface PostTemplateProps extends PostTemplateQueryResult {
 const PostTemplate = ({ data, children }: PostTemplateProps) => {
   const { mdx } = data
   const {
-    body,
     frontmatter: {
-      slug,
       title,
       description,
       author,
       date,
       image,
-      tags,
     },
-    htmlAst,
     fields: {
       timeToRead: {
         text,

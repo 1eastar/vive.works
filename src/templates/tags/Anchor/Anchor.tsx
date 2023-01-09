@@ -1,3 +1,6 @@
+/* External */
+import React from 'react'
+
 /* Internal */
 import * as styles from './Anchor.scss'
 

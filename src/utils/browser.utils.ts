@@ -1,4 +1,4 @@
-export const isBrowser = typeof window !== "undefined"
+export const isBrowser = typeof window !== 'undefined'
 
 export function getQueryParamValue(query?: string, key?: string): string | undefined {
   if (query) {

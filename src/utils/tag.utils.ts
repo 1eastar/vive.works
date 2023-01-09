@@ -1,5 +1,5 @@
 /* Internal */
-import { TagQueryResult } from "@commons/types/QueryType"
+import { TagQueryResult } from '@commons/types/QueryType'
 
 export interface Tag {
   text: string

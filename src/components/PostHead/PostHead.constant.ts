@@ -5,7 +5,7 @@ export const CONTAINER_ANIMATION_VARIANTS = {
   mounting: {
     opacity: 1,
     transition: {
-      when: "beforeChildren",
+      when: 'beforeChildren',
       staggerChildren: 0.2
     },
   },

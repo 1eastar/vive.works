@@ -6,22 +6,23 @@ import React, {
   useEffect,
   useRef,
   useState,
-} from "react"
-import classNames from "classnames"
+} from 'react'
+import classNames from 'classnames'
 
 /* Internal */
-import useResizeObserver from "@hooks/useResizeObserver.hook"
-import { isBrowser } from "@utils/browser.utils"
-import Resizer from "./Resizer"
+import useResizeObserver from '@hooks/useResizeObserver.hook'
+import { isBrowser } from '@utils/browser.utils'
+import Resizer from './Resizer'
 import {
   MAX_SUB_VIEW_SIZE,
   MIN_SUB_VIEW_SIZE,
   INITIAL_SIZES,
   RESIZER_WIDTH,
   MOBILE_SCREEN_MAX_WIDTH,
-} from "./SplitView.constant"
+} from './SplitView.constant'
 import * as styles from './SplitView.scss'
 
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {}
 
 interface SplitViewProps {

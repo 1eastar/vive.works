@@ -32,11 +32,11 @@ export type MDX = {
 
 export interface TOCQueryNode {
   body: string
-  frontmatter: Pick<Frontmatter, "slug">
+  frontmatter: Pick<Frontmatter, 'slug'>
 }
 
 export interface TagQueryNode {
-  frontmatter: Pick<Frontmatter, "tags">
+  frontmatter: Pick<Frontmatter, 'tags'>
 }
 
 /* Query Results */

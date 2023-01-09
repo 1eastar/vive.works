@@ -1,8 +1,8 @@
 /* External */
 
 /* Internal */
-import { Frontmatter } from "@commons/types/QueryType"
-import PostTag from "@components/PostTag"
+import { Frontmatter } from '@commons/types/QueryType'
+import PostTag from '@components/PostTag'
 import ClockIcon from '-!svg-react-loader!@statics/icons/clock.svg'
 import * as styles from './PostHead.scss'
 

@@ -1,11 +1,11 @@
 /* External */
-import { useMemo, useCallback } from "react"
-import { navigate } from "gatsby"
-import classNames from "classnames"
+import { useMemo, useCallback } from 'react'
+import { navigate } from 'gatsby'
+import classNames from 'classnames'
 
 /* Internal */
-import { Tag } from "@utils/tag.utils"
-import { getQueryParamValue } from "@utils/browser.utils"
+import { Tag } from '@utils/tag.utils'
+import { getQueryParamValue } from '@utils/browser.utils'
 import * as styles from './TagItem.scss'
 
 function TagItem(tag: Tag) {

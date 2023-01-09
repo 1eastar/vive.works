@@ -1,10 +1,10 @@
 /* External */
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from 'react'
 
 /* Internal */
-import { isBrowser } from "@utils/browser.utils"
+import { isBrowser } from '@utils/browser.utils'
 
-const MediaQueryList = isBrowser && window.matchMedia("(prefers-color-scheme: dark)")
+const MediaQueryList = isBrowser && window.matchMedia('(prefers-color-scheme: dark)')
 
 export default function useIsDarkMode() {
   if (!MediaQueryList) { return false }

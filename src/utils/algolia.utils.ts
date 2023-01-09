@@ -1,4 +1,4 @@
-const indexName = `Posts`
+const indexName = 'Posts'
 
 const pageQuery = `{
   posts: allMdx {
@@ -33,6 +33,6 @@ module.exports = [
     query: pageQuery,
     transformer: ({ data }) => data.posts.nodes.map(convertPageToAlgoliaRecord),
     indexName,
-    settings: { attributesToSnippet: [`excerpt:20`] },
+    settings: { attributesToSnippet: ['excerpt:20'] },
   },
 ]

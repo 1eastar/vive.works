@@ -1,12 +1,12 @@
 /* External */
-import { useCallback, useMemo, useState } from "react"
-import { useStaticQuery, graphql } from "gatsby"
+import { useCallback, useMemo, useState } from 'react'
+import { useStaticQuery, graphql } from 'gatsby'
 
 /* Internal */
-import { changeMdxToTOCItems, findCurrentMDX } from "@utils/TOC.utils"
-import { TOCQueryResult } from "@commons/types/QueryType"
-import useIntersectionObserver from "@hooks/useIntersectionObserver.hook"
-import TOCItem from "./TOCItem"
+import { changeMdxToTOCItems, findCurrentMDX } from '@utils/TOC.utils'
+import { TOCQueryResult } from '@commons/types/QueryType'
+import useIntersectionObserver from '@hooks/useIntersectionObserver.hook'
+import TOCItem from './TOCItem'
 import * as styles from './TOC.scss'
 
 function TOC() {

@@ -1,62 +1,62 @@
 // Original: https://github.com/sdras/night-owl-vscode-theme
 // Converted automatically using ./tools/themeFromVsCode
 
-import type { PrismTheme } from "prism-react-renderer"
+import type { PrismTheme } from 'prism-react-renderer'
 
 const theme: PrismTheme = {
   plain: {
-    color: "#403f53",
-    backgroundColor: "#F7F7F7"
+    color: '#403f53',
+    backgroundColor: '#F7F7F7'
   },
   styles: [{
-    types: ["changed"],
+    types: ['changed'],
     style: {
-      color: "rgb(162, 191, 252)",
+      color: 'rgb(162, 191, 252)',
     }
   }, {
-    types: ["deleted"],
+    types: ['deleted'],
     style: {
-      color: "rgba(239, 83, 80, 0.56)",
+      color: 'rgba(239, 83, 80, 0.56)',
     }
   }, {
-    types: ["inserted", "attr-name", "attr-value", "spread"],
+    types: ['inserted', 'attr-name', 'attr-value', 'spread'],
     style: {
-      color: "#63A35C",
+      color: '#63A35C',
     }
   }, {
-    types: ["comment"],
+    types: ['comment'],
     style: {
-      color: "rgb(152, 159, 177)",
+      color: 'rgb(152, 159, 177)',
     }
   }, {
-    types: ["string", "builtin", "char", "constant", "url", "number", "boolean"],
+    types: ['string', 'builtin', 'char', 'constant', 'url', 'number', 'boolean'],
     style: {
-      color: "#50A14F"
+      color: '#50A14F'
     }
   }, {
-    types: ["variable"],
+    types: ['variable'],
     style: {
-      color: "rgb(201, 103, 101)"
+      color: 'rgb(201, 103, 101)'
     }
   }, {
-    types: ["punctuation"],
+    types: ['punctuation'],
     style: {
-      color: "#212529"
+      color: '#212529'
     }
   }, {
-    types: ["operator"],
+    types: ['operator'],
     style: {
-      color: "#0184BC"
+      color: '#0184BC'
     }
   }, {
-    types: ["function", "selector", "doctype"],
+    types: ['function', 'selector', 'doctype'],
     style: {
-      color: "#005CC5",
+      color: '#005CC5',
     }
   }, {
-    types: ["property", "keyword", "namespace", "class-name", "tag"],
+    types: ['property', 'keyword', 'namespace', 'class-name', 'tag'],
     style: {
-      color: "#A626A4"
+      color: '#A626A4'
     }
   }]
 }

@@ -5,7 +5,7 @@ import { Helmet } from 'react-helmet'
 /* Internal */
 import { useSiteMetadata } from '@hooks/useSiteMetadata.hook'
 
-const SITE_TITLE = "Vive's log"
+const SITE_TITLE = 'Vive\'s log'
 
 interface SeoProps {
 	lang?: string

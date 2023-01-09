@@ -1,6 +1,6 @@
 /* External */
-import classnames from "classnames"
-import { MouseEventHandler, useCallback, useState } from "react"
+import classnames from 'classnames'
+import { MouseEventHandler, useCallback, useState } from 'react'
 
 /* Internal */
 import * as styles from './Resizer.scss'

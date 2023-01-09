@@ -1,110 +1,110 @@
 // Original: https://github.com/sdras/night-owl-vscode-theme
 // Converted automatically using ./tools/themeFromVsCode
 
-import type { PrismTheme } from "prism-react-renderer"
+import type { PrismTheme } from 'prism-react-renderer'
 
 const theme: PrismTheme = {
   plain: {
-    color: "#e0e6f1",
-    backgroundColor: "#28292B",
+    color: '#e0e6f1',
+    backgroundColor: '#28292B',
   },
   styles: [
     {
-      types: ["changed"],
+      types: ['changed'],
       style: {
-        color: "rgb(162, 191, 252)",
+        color: 'rgb(162, 191, 252)',
       },
     },
     {
-      types: ["deleted"],
+      types: ['deleted'],
       style: {
-        color: "rgba(239, 83, 80, 0.56)",
+        color: 'rgba(239, 83, 80, 0.56)',
       },
     },
     {
-      types: ["inserted", "attr-name", "attr-value"],
+      types: ['inserted', 'attr-name', 'attr-value'],
       style: {
-        color: "rgb(173, 219, 103)",
+        color: 'rgb(173, 219, 103)',
       },
     },
     {
-      types: ["attr-name", "number"],
+      types: ['attr-name', 'number'],
       style: {
-        color: "#d19a66",
+        color: '#d19a66',
       },
     },
     {
-      types: ["spread"],
+      types: ['spread'],
       style: {
-        color: "#56B6C2",
+        color: '#56B6C2',
       },
     },
     {
-      types: ["comment"],
+      types: ['comment'],
       style: {
-        color: "#7c858d",
+        color: '#7c858d',
       },
     },
     {
-      types: ["string", "url"],
+      types: ['string', 'url'],
       style: {
-        color: "rgb(173, 219, 103)",
+        color: 'rgb(173, 219, 103)',
       },
     },
     {
-      types: ["variable"],
+      types: ['variable'],
       style: {
-        color: "rgb(214, 222, 235)",
+        color: 'rgb(214, 222, 235)',
       },
     },
     {
-      types: ["builtin", "char", "constant", "function"],
+      types: ['builtin', 'char', 'constant', 'function'],
       style: {
-        color: "#61AFEF",
+        color: '#61AFEF',
       },
     },
     {
       // This was manually added after the auto-generation
       // so that punctuations are not italicised
-      types: ["punctuation"],
+      types: ['punctuation'],
       style: {
-        color: "#ABB2BF",
+        color: '#ABB2BF',
       },
     },
     {
-      types: ["selector", "doctype"],
+      types: ['selector', 'doctype'],
       style: {
-        color: "rgb(199, 146, 234)",
+        color: 'rgb(199, 146, 234)',
       },
     },
     {
-      types: ["class-name", "script"],
+      types: ['class-name', 'script'],
       style: {
-        color: "#E06C75",
+        color: '#E06C75',
       },
     },
     {
-      types: ["tag", "keyword"],
+      types: ['tag', 'keyword'],
       style: {
-        color: "#C678DD",
+        color: '#C678DD',
       },
     },
     {
-      types: ["operator"],
+      types: ['operator'],
       style: {
-        color: "#98c376",
+        color: '#98c376',
       },
     },
     {
-      types: ["boolean"],
+      types: ['boolean'],
       style: {
-        color: "rgb(255, 88, 116)",
+        color: 'rgb(255, 88, 116)',
       },
     },
     {
-      types: ["namespace"],
+      types: ['namespace'],
       style: {
-        color: "rgb(178, 204, 214)",
+        color: 'rgb(178, 204, 214)',
       },
     },
   ],
