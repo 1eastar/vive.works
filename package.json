@@ -64,7 +64,6 @@
     "start": "gatsby develop",
     "serve": "gatsby serve",
     "clean": "gatsby clean",
-    "test": "yarn typecheck && yarn eslint",
     "eslint": "eslint 'src/**/*.+(js|ts)?(x)' --fix",
     "typecheck": "tsc --noEmit",
     "lint-staged": "lint-staged",
