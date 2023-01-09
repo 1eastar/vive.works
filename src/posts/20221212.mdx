@@ -61,7 +61,7 @@ asdfsadasdfasfsd
 a test [anchor test](https://naver.com)zzzzzzzz
 연대 종강 시계.....
 
-![alt image](../statics/images/gatsby-icon.png)
+![alt image](../statics/images/profile.jpeg)
 
 
 # gatsby 블로그 만들 때 헤맸던 것.
@@ -133,6 +133,7 @@ acorn에 대해서도 찾아봤는데, ts parse는 안 되는 것 같았다. (ts
 저걸 보자마자 postTemplate.tsx를 jsx 파일로 바꾸고 테스트를 해보니 잘 되었다. ts 트랜스파일이 제대로 안 되는 거라고 생각해서 babel.config.js 세팅을 해주고, `@babel/preset-typescript`를 세팅해준 후 다시 확인해봤더니 오류없이 잘 됨.
 `gatsby-plugin-typescript` 플러그인도 ts 트랜스파일을 해주고 이 폴러그인은 gatsby에 기본적으로 포함되는데 플러그인 옵션값을 지정해주기 위해서는 gatsby-config.js 파일에 등록해야한다. isTSX: true, allExtensions: true 로 지정하면 오류없이 트랜스파일 잘 됨.
 babel-preset-gatsby 를 프리셋으로 세팅하고 reactRuntime 옵션을 automatic으로 한 거는 React is not defined 에러가 자꾸 떠서.
+
 
 ## css, scss를 ES module 처럼 사용하기. (import scss from '.scss')
 declard module "*.scss"
@@ -236,12 +237,41 @@ module.exports = {
 ```
 이런 식으로 babel은 webpack 자체에 포함시켜 사용할 수도 있다.
 
+## webpack vs. webpack + .babelrc
+webpack만 사용하고 babel-loader 에 config 세팅을 직접 다 해주면 babel은 webpack에서만 사용 가능.
+webpack + .babelrc이면 webpack 안에는 babel-loader만 세팅해줘도 됨. webpack이 알아서 .babelrc 세팅을 참고함. babel을 필요로하는 다른 모듈들에서도 사용 가능.
+
 
 ## babel to SWC, webpack to spack(swcpack in future)
 https://swc.rs/docs/usage/bundling (spack)
 
 
+## type vs interface
+index signature
 
+
+## robot.txt, sitemap.xml
+robot.txt
+1. 웹사이트 내의 특정 콘텐츠, 웹페이지, 서브 폴더, 디렉토리로의 크롤러 접근 제어
+2. 사이트 맵 위치 전달
+3. 검색 크롤러에 의한 과부하 방지
+
+sitemap.xml
+1. 웹사이트의 주요 인터페이스 즉 글로벌 네비게이션 바 등의 메뉴를 통해 바로 접근할 수 없는 웹 콘텐츠 등을 정의하고 크롤링 로봇이 바로 URL에 접근할 수 있게 한다.
+2. 웹 사이트가 Ajax 및 Silverlight , Flash 등을 많이 사용하는 경우 검색 엔진이 모든 페이지의 콘텐츠로 접근이 어려울 수 있기 때문에 이 부분을 보완해서 컨텐츠에 크롤러를 바로 유도한다.
+
+
+## pre commit 
+lint-staged, package.json 참고
+
+
+## useMemo
+https://medium.com/swlh/should-you-use-usememo-in-react-a-benchmarked-analysis-159faf6609b7
+
+
+# Promise, async/await
+> Promise 객체를 반환하는 함수를 사용할 때, 앞에 await을 꼭 붙일 필요가 없다. await이 안 붙으면 pending 상태의 Promise 객체를 반환한다.
+> await을 붙이면 반환되는 Promise 객체가 resolve 될 때까지 기다리고 fullfill된 값을 받는다. 
 
 
 // import scss에서 "* as" 를 안 붙이고도 사용할 수 있는데 세팅 어케함?

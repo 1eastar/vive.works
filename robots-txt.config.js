@@ -1,5 +1,5 @@
 module.exports = {
-  host: 'https://vive.log',
-  sitemap: 'https://vive.log/sitemap.xml',
+  host: 'https://vive.works',
+  sitemap: 'https://vive.works/sitemap.xml',
   policy: [{ userAgent: '*', allow: '/' }],
 }

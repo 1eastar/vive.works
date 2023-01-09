@@ -4,6 +4,6 @@ declare module '*.scss' {
 }
 
 declare module '*.svg' {
-  const content: string
+  const content: any
   export default content
 }

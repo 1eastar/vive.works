@@ -12,11 +12,11 @@ require("dotenv").config()
  */
 module.exports = {
 	siteMetadata: {
-		title: `Vive's log`,
-		description: `강동진의 log`,
+		title: `Vive's work`,
+		description: `강동진의 works`,
 		author: `Vive Kang`,
-		siteUrl: `https://vive.log`,
-		image: ``,
+		siteUrl: `https://vive.works`,
+		image: `./src/images/profile.jpeg`,
 	},
 	plugins: [
 		`gatsby-plugin-image`,
@@ -47,7 +47,7 @@ module.exports = {
 				// https://css-tricks.com/meta-theme-color-and-trickery/
 				// theme_color: `#663399`,
 				display: `minimal-ui`,
-				icon: `src/statics/images/gatsby-icon.png`, // This path is relative to the root of the site.
+				icon: `src/statics/images/profile.jpeg`, // This path is relative to the root of the site.
 			},
 		},
 		{

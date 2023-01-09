@@ -23,30 +23,49 @@
       flex-direction: row;
       align-items: center;
       gap: 8px;
+      cursor: pointer;
 
       .red {
-        width: 13px;
-        height: 13px;
-        border-radius: 50%;
         background-color: var(--mac-header-red);
+
+        .svgIcon {
+          width: 11px;
+          height: 11px;
+          fill: rgba(0, 0, 0, .6);
+          display: none;
+        }
       }
 
       .yellow {
-        width: 13px;
-        height: 13px;
-        border-radius: 50%;
         background-color: var(--mac-header-yellow);
+
+        .svgIcon {
+          width: 9px;
+          height: 9px;
+          fill: rgba(0, 0, 0, .6);
+          display: none;
+        }
       }
 
       .green {
-        width: 13px;
-        height: 13px;
-        border-radius: 50%;
         background-color: var(--mac-header-green);
+
+        .svgIcon {
+          width: 9px;
+          height: 9px;
+          fill: rgba(0, 0, 0, .6);
+          display: none;
+        }
+      }
+
+      &:hover {
+        .svgIcon {
+          display: block;
+        }
       }
     }
 
-    .viveLog {
+    .viveWorks {
       text-decoration: none;
       color: var(--mac-header-text-color);
       font-size: $font-size-xxs;
@@ -57,4 +76,13 @@
       width: 55px;
     }
   }
+}
+
+.svgIconWrapper {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

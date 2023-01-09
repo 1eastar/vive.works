@@ -35,7 +35,7 @@ function SubPanel() {
           className={styles.title}
           onClick={onClickHeader}
         >
-          Vive log v{VERSION}
+          Vive works v{VERSION}
         </div>
         <div className={styles.icon} onClick={onClickGithubIcon}>
           <GithubIcon />

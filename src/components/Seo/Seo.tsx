@@ -46,7 +46,7 @@ function Seo({
 			<meta name='date' content={date} />
 			<meta property='og:title' content={title} />
 			<meta property='og:description' content={_description} />
-      <meta property="og:site_name" content="vive's log" />
+      <meta property="og:site_name" content="vive's work" />
       <meta property="og:image" content={_image} />
       <meta property="og:type" content="website" />
 			{children}
