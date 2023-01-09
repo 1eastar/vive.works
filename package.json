@@ -59,7 +59,7 @@
   ],
   "license": "0BSD",
   "scripts": {
-    "build": "yarn generateVersion && gatsby build",
+    "build": "yarn generateVersion && yarn eslint && gatsby build",
     "dev": "gatsby develop",
     "start": "gatsby develop",
     "serve": "gatsby serve",

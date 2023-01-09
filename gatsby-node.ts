@@ -1,13 +1,13 @@
 /* External */
-import { CreateNodeArgs, GatsbyNode } from "gatsby"
+import { CreateNodeArgs, GatsbyNode } from 'gatsby'
 import path from 'path'
 import readingTime from 'reading-time'
 
 /* Internal */
-import { AllMDXQueryResult, MDX, PageContext } from "@commons/types/QueryType"
+import { AllMDXQueryResult, MDX, PageContext } from '@commons/types/QueryType'
 
-export const createPages: GatsbyNode["createPages"] = async ({ actions, graphql, reporter }) => {
-	const postTemplatePath = path.resolve(`./src/templates/PostTemplate.tsx`)
+export const createPages: GatsbyNode['createPages'] = async ({ actions, graphql, reporter }) => {
+	const postTemplatePath = path.resolve('./src/templates/PostTemplate.tsx')
 	const { createPage } = actions
 
 	const { data, errors } = await graphql<AllMDXQueryResult>(`
@@ -36,39 +36,39 @@ export const createPages: GatsbyNode["createPages"] = async ({ actions, graphql,
 		createPage<PageContext>({
 			path: node.frontmatter.slug,
 			component: `${postTemplatePath.trim()}?__contentFilePath=${node.internal.contentFilePath}`,
-			context: {slug: node.frontmatter.slug},
+			context: { slug: node.frontmatter.slug },
 		})
 	})
 }
 
-export const onCreateNode: GatsbyNode["onCreateNode"] = ({
+export const onCreateNode: GatsbyNode['onCreateNode'] = ({
 	node, actions
 }: CreateNodeArgs<MDX>) => {
   const { createNodeField } = actions
-  if (node.internal.type === `Mdx`) {
+  if (node.internal.type === 'Mdx') {
     createNodeField({
       node,
-      name: `timeToRead`,
+      name: 'timeToRead',
       value: readingTime(node.body)
     })
   }
 }
 
-export const onCreateWebpackConfig: GatsbyNode["onCreateWebpackConfig"] = ({ actions }) => {
+export const onCreateWebpackConfig: GatsbyNode['onCreateWebpackConfig'] = ({ actions }) => {
   actions.setWebpackConfig({
     resolve: {
-      modules: [path.resolve(__dirname, "src"), "node_modules"],
+      modules: [path.resolve(__dirname, 'src'), 'node_modules'],
 			alias: {
-				"@commons": path.resolve(__dirname, "./src/commons"),
-				"@components": path.resolve(__dirname, "./src/components"),
-				"@hooks": path.resolve(__dirname, "./src/hooks"),
-				"@pages": path.resolve(__dirname, "./src/pages"),
-				"@posts": path.resolve(__dirname, "./src/posts"),
-				"@statics": path.resolve(__dirname, "./src/statics"),
-				"@styles": path.resolve(__dirname, "./src/styles"),
-				"@templates": path.resolve(__dirname, "./src/templates"),
-				"@lib": path.resolve(__dirname, "./src/lib"),
-				"@utils": path.resolve(__dirname, "./src/utils"),
+				'@commons': path.resolve(__dirname, './src/commons'),
+				'@components': path.resolve(__dirname, './src/components'),
+				'@hooks': path.resolve(__dirname, './src/hooks'),
+				'@pages': path.resolve(__dirname, './src/pages'),
+				'@posts': path.resolve(__dirname, './src/posts'),
+				'@statics': path.resolve(__dirname, './src/statics'),
+				'@styles': path.resolve(__dirname, './src/styles'),
+				'@templates': path.resolve(__dirname, './src/templates'),
+				'@lib': path.resolve(__dirname, './src/lib'),
+				'@utils': path.resolve(__dirname, './src/utils'),
 			},
     },
 		module: {
