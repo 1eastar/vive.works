@@ -5,7 +5,7 @@ import { Helmet } from 'react-helmet'
 /* Internal */
 import { useSiteMetadata } from '@hooks/useSiteMetadata.hook'
 
-const SITE_TITLE = 'Vive\'s work'
+const SITE_TITLE = 'Vive works'
 
 interface SeoProps {
 	lang?: string
@@ -46,7 +46,7 @@ function Seo({
 			<meta name='date' content={date} />
 			<meta property='og:title' content={title} />
 			<meta property='og:description' content={_description} />
-      <meta property="og:site_name" content="vive's work" />
+      <meta property="og:site_name" content="vive works" />
       <meta property="og:image" content={_image} />
       <meta property="og:type" content="website" />
 			{children}
