@@ -5,11 +5,11 @@ require('dotenv').config()
  */
 module.exports = {
 	siteMetadata: {
-		title: 'Vive\'s work',
+		title: 'Vive works',
 		description: '강동진의 works',
 		author: 'Vive Kang',
 		siteUrl: 'https://vive.works',
-		image: './src/images/profile.jpeg',
+		image: 'https://vive.works/og_image.jpeg',
 	},
 	plugins: [
 		'gatsby-plugin-image',
