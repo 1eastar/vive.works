@@ -42,6 +42,7 @@ const PostTemplate = ({ data, children }: PostTemplateProps) => {
       author,
       date,
       image,
+      slug,
     },
     fields: {
       timeToRead: {
@@ -58,6 +59,7 @@ const PostTemplate = ({ data, children }: PostTemplateProps) => {
         author={author}
         date={date}
         image={image}
+        slug={slug}
       />
       <PostHead 
         {...mdx.frontmatter}

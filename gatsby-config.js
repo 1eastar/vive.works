@@ -6,7 +6,7 @@ require('dotenv').config()
 module.exports = {
 	siteMetadata: {
 		title: 'Vive works',
-		description: '강동진의 works',
+		description: '강동진의 기록들',
 		author: 'Vive Kang',
 		siteUrl: 'https://vive.works',
 		image: 'https://vive.works/og_image.jpeg',
@@ -24,8 +24,8 @@ module.exports = {
 			resolve: 'gatsby-source-filesystem',
 			options: {
 				name: 'posts',
-				path: `${__dirname}/src/posts`
-			}
+				path: `${__dirname}/src/posts`,
+			},
 		},
 		'gatsby-transformer-sharp',
 		'gatsby-plugin-sharp',
@@ -82,23 +82,23 @@ module.exports = {
       options: {
         appId: process.env.GATSBY_ALGOLIA_APP_ID,
         apiKey: process.env.ALGOLIA_ADMIN_KEY,
-        queries: require('./src/utils/algolia.utils.ts')
+        queries: require('./src/utils/algolia.utils.ts'),
       },
     },
 		{
 			resolve: 'gatsby-plugin-react-svg',
 			options: {
 				rule: {
-					include: /icons/ 
-				}
-			}
+					include: /icons/,
+				},
+			},
 		},
 		'gatsby-plugin-sitemap',
 		{
       resolve: 'gatsby-plugin-robots-txt',
       options: {
-        configFile: 'robots-txt.config.js'
-      }
+        configFile: 'robots-txt.config.js',
+      },
     },
 	],
 }

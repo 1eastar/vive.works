@@ -14,6 +14,7 @@ interface SeoProps {
 	author?: string
 	date?: string
 	image?: string
+	slug?: string
 	children?: React.ReactNode
 }
 
@@ -25,6 +26,7 @@ function Seo({
 	author,
 	date  = '',
 	image,
+	slug,
 	children,
 }: SeoProps) {
 	const { site: { siteMetadata: _siteMetadata } } = useSiteMetadata()
@@ -33,6 +35,8 @@ function Seo({
 	const _title = title ??  _siteMetadata.title
 	const _author = author ?? _siteMetadata.author
 	const _image = image ?? _siteMetadata.image
+	const _slug = slug ?? ''
+	const _url = _siteMetadata.siteUrl + _slug
 
 	return (
 		<Helmet
@@ -46,9 +50,10 @@ function Seo({
 			<meta name='date' content={date} />
 			<meta property='og:title' content={title} />
 			<meta property='og:description' content={_description} />
-      <meta property="og:site_name" content="vive works" />
-      <meta property="og:image" content={_image} />
-      <meta property="og:type" content="website" />
+      <meta property='og:site_name' content='vive works' />
+      <meta property='og:image' content={_image} />
+      <meta property='og:type' content='website' />
+			<meta property='og:url' content={_url}/>
 			{children}
 		</Helmet>
 	)
