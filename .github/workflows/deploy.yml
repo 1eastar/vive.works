@@ -50,8 +50,7 @@ jobs:
       run: aws s3 cp --recursive --region $AWS_REGION public s3://$S3_BUCKET
 
     - name: create CF Invaildation
-      env:
-        AWS_CF_DISTRIBUTION_ID: ${{ secrets.AWS_CF_DISTRIBUTION_ID }}
-      run: aws cloudfront create-invalidation \
-        --distribution-id $AWS_CF_DISTRIBUTION_ID \
-        --paths "/*"
+      run: |
+        aws cloudfront create-invalidation \
+          --distribution-id ${{ secrets.AWS_CF_DISTRIBUTION_ID }} \
+          --paths "/*"
