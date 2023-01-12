@@ -46,7 +46,7 @@ jobs:
         ALGOLIA_ADMIN_KEY: ${{ secrets.ALGOLIA_ADMIN_KEY }}
       run: yarn build
       
-    - name: Build the Docker image
+    - name: upload to S3 bucket
       run: aws s3 cp --recursive --region $AWS_REGION public s3://$S3_BUCKET
 
     - name: create CF Invaildation
