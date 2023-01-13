@@ -1,7 +1,7 @@
 @import '@styles/global.scss';
 @import '@styles/mixin.scss';
 
-.panelContainer {
+.panel-container {
   @include ellipsis();
   overflow-y: scroll;
   background-color: var(--left-panel-bg-color);
@@ -14,7 +14,7 @@
   }
 }
 
-.mainContainer {
+.main-container {
   overflow-y: scroll;
   // width: calc(100vw - 300px);
   height: 100vh;
@@ -27,7 +27,7 @@
   }
 
   .main {
-    max-width: 700px;
+    max-width: $max-width;
     margin: 0 auto;
     padding: 150px 10px 20px;
     min-height: calc(100% - 56px);  // footer height
@@ -38,7 +38,7 @@
   }
 
   .footer {
-    max-width: 700px;
+    max-width: $max-width;
     margin: 0 auto;
     padding: 20px 0;
     text-align: center;

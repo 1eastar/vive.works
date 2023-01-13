@@ -1,9 +1,7 @@
 /* External */
-import React, { useMemo } from 'react'
-import { motion } from 'framer-motion'
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 /* Internal */
-import { isBrowser } from '@utils/browser.utils'
 import Header from '@components/Header'
 import SplitView from '@components/SplitView'
 import SubPanel from '@components/SubPanel'
@@ -15,55 +13,31 @@ import {
 	MAIN_PANEL_TRANSITION,
 } from './Layout.constant'
 import * as styles from './Layout.scss'
+import MainTransition from './Transitions/MainTransition'
+import SubTransition from './Transitions/SubTransition'
 
 interface LayoutProps {
 	children: React.ReactNode
+	location: Location
 }
 
-function Layout({ children }: LayoutProps) {
-  const pathname = isBrowser ? window.location.pathname : ''
-	
-	const [subPanelVariants, mainPanelVariants] = useMemo(() => {
-		if (pathname === '/') {
-			return [
-				HOME_SUB_PANEL_ANIMATION_VARIANTS,
-				HOME_MAIN_PANEL_ANIMATION_VARIANTS,
-			]
-		} else {
-			return [
-				POST_SUB_PANEL_ANIMATION_VARIANTS,
-				POST_MAIN_PANEL_ANIMATION_VARIANTS,
-			]
-		}
-	}, [pathname])
+function Layout({ children, location }: LayoutProps) {
 
 	return (
 		<>
 			<Header />
 			<SplitView>
 				<div className={styles.panelContainer}>
-					<motion.span
-						layout
-						variants={subPanelVariants}
-						initial="initial"
-						animate="mounting"
-						exit="exit"
-					>
-						<SubPanel />
-					</motion.span>
+					<SubTransition location={location}>
+						<SubPanel location={location} />
+					</SubTransition>
 				</div>
 				<div className={styles.mainContainer}>
-					<motion.div
-						layout
-						className={styles.main}
-						variants={mainPanelVariants}
-						initial="initial"
-						animate="mounting"
-						exit="exit"
-						transition={MAIN_PANEL_TRANSITION}
-					>
-						{ children }
-					</motion.div>
+					<div className={styles.main}>
+						<MainTransition location={location}>
+							{ children }
+						</MainTransition>
+					</div>
 					<div className={styles.footer}>
 						© { new Date().getFullYear() } &middot; Vive kang {/* &middot; All rights reserved */}
 					</div>
