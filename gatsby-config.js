@@ -6,7 +6,7 @@ require('dotenv').config()
 module.exports = {
 	siteMetadata: {
 		title: 'Vive works',
-		description: '강동진의 기록들',
+		description: '개발자 강동진의 기록들',
 		author: 'Vive Kang',
 		siteUrl: 'https://vive.works',
 		image: 'https://vive.works/og_image.jpeg',
