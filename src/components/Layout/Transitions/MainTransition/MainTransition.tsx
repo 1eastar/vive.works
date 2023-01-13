@@ -14,6 +14,7 @@ function MainTransition({
   location: { pathname },
   children,
 }: MainTransitionProps) {
+  
   const transitionClassNames = useMemo(() => {
     if (pathname === '/') {
       return {

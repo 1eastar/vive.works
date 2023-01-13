@@ -1,5 +1,5 @@
 /* External */
-import React, { useMemo } from 'react'
+import React from 'react'
 import { TransitionGroup, CSSTransition } from 'react-transition-group'
 
 /* Internal */
@@ -14,14 +14,15 @@ function SubTransition({
   location: { pathname },
   children,
 }: SubTransitionProps) {
-  const transitionClassNames = useMemo(() => ({
+
+  const transitionClassNames = {
     enter: styles.enter,
     enterActive: styles.enterActive,
     enterDone: styles.enterDone,
     exit: styles.exit,
     exitActive: styles.exitActive,
     exitDone: styles.exitDone,
-  }), [pathname])
+  }
   
   return (
     <TransitionGroup component={null}>

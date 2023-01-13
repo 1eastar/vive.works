@@ -2,13 +2,12 @@
 
 .enter {
   position: absolute;
-  max-width: 30%;
   opacity: 0;
 }
 
 .enter-active {
   position: absolute;
-  max-width: 30%;
+  width: 100%;
   opacity: 1;
   transition: opacity $main-transition-duration ease-in-out;
 }
@@ -24,6 +23,7 @@
 
 .exit-active {
   opacity: 0;
+  width: 100%;
   transition: opacity $main-transition-duration ease-in-out;
 }
 

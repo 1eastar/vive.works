@@ -6,6 +6,7 @@
   overflow-y: scroll;
   background-color: var(--left-panel-bg-color);
   height: 100vh;
+  position: relative;
 
   &> * {
     @media (max-width: 800px) {
