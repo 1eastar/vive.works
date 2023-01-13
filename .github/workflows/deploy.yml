@@ -33,7 +33,8 @@ jobs:
       id: node_module_cache
       with:
         path: node_modules
-        key: yarn-packages-${{ hashFiles('**/package-lock.json') }}
+        key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.json') }}
+        restore-keys: ${{ runner.os }}-yarn-
 
     - name: Install Dependencies
       if: steps.node_module_cache.outputs.cache-hit != 'true'
