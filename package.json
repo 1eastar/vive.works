@@ -69,7 +69,6 @@
     "eslint": "eslint 'src/**/*.+(js|ts)?(x)' --fix",
     "typecheck": "tsc --noEmit",
     "lint-staged": "lint-staged",
-    "generateVersion": "node -p \"'export const VERSION = ' + JSON.stringify(require('./package.json').version)\" > ./src/lib/version/version.ts",
     "precommit-msg": "echo ' > 테스트 코드를 실행 중입니다...' && exit 0"
   },
   "engines": {

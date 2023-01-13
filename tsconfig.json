@@ -38,7 +38,6 @@
 			"@statics/*": ["src/statics/*"],
 			"@styles/*": ["src/styles/*"],
 			"@templates/*": ["src/templates/*"],
-			"@lib/*": ["src/lib/*"],
 			"@utils/*": ["src/utils/*"],
 		} /* Specify a set of entries that re-map imports to additional lookup locations. */,
 		// "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */

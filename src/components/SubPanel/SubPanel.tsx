@@ -1,9 +1,9 @@
 /* External */
 import { useCallback } from 'react'
+import { navigate } from 'gatsby'
 
 /* Internal */
-import { VERSION } from '@lib/version/version'
-import { EMAIL, GITHUB_REPOSITORY_URL, GITHUB_URL } from '@commons/constants/info.constant'
+import { EMAIL, GITHUB_REPOSITORY_URL } from '@commons/constants/info.constant'
 import { SUB_PANEL_TITLE } from '@commons/constants/subPanel.constant'
 import TagCollection from './TagCollection'
 import TOC from './TOC'
@@ -20,11 +20,11 @@ function SubPanel({ location }: SubPanelProps) {
   const pathname = location.pathname
 
   const onClickHeader = useCallback(() => {
-    window.open(GITHUB_REPOSITORY_URL, '_blank', 'noopener noreferrer')
+    navigate('/')
   }, [])
 
   const onClickGithubIcon = useCallback(() => {
-    window.open(GITHUB_URL, '_blank', 'noopener noreferrer')
+    window.open(GITHUB_REPOSITORY_URL, '_blank', 'noopener noreferrer')
   }, [])
 
   const onClickEmailIcon = useCallback(() => {
@@ -38,7 +38,7 @@ function SubPanel({ location }: SubPanelProps) {
           className={styles.title}
           onClick={onClickHeader}
         >
-          Vive works v{VERSION}
+          Vive works
         </div>
         <div className={styles.icon} onClick={onClickGithubIcon}>
           <GithubIcon />
