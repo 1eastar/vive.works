@@ -3,7 +3,6 @@ import React, {
   MouseEvent,
   MouseEventHandler,
   useCallback,
-  useEffect,
   useRef,
   useState,
 } from 'react'
@@ -11,12 +10,10 @@ import classNames from 'classnames'
 
 /* Internal */
 import useResizeObserver from '@hooks/useResizeObserver.hook'
-import { isBrowser } from '@utils/browser.utils'
 import Resizer from './Resizer'
 import {
   MAX_SUB_VIEW_SIZE,
   MIN_SUB_VIEW_SIZE,
-  INITIAL_SIZES,
   RESIZER_WIDTH,
   MOBILE_SCREEN_MAX_WIDTH,
 } from './SplitView.constant'
@@ -30,12 +27,12 @@ interface SplitViewProps {
   onDragStart?: (e: MouseEvent) => void
   onDragEnd?: (e: MouseEvent) => void
   onDragging?: (sizes: number[]) => void
-  initialResizerPos?: number
+  subPanelRatio?: number
 }
 
 function SplitView({
   children,
-  initialResizerPos = 300,
+  subPanelRatio = 25,
   onDragStart = noop,
   onDragEnd = noop,
   onDragging = noop,
@@ -43,49 +40,42 @@ function SplitView({
   const cachedSizes = useRef<number[]>([])
   const [wrapperRect, setWrapperRect] = useState({})
   const [isDragging, setIsDragging] = useState(false)
-  const [sizes, setSizes] = useState<number[]>(INITIAL_SIZES)
-
-  useEffect(() => {
-    // INITIAL_SIZES는 flick 방지를 위한 임시 sizes
-    if (isBrowser) {
-      setSizes([initialResizerPos, document.documentElement.clientWidth - initialResizerPos])
-    }
-  }, [])
+  const [sizeRatios, setSizeRatios] = useState<number[]>([subPanelRatio, 100 - subPanelRatio])
 
   const wrapperRef = useResizeObserver((entry: ResizeObserverEntry) => {
     setWrapperRect(entry.contentRect ?? {})
   })
 
   const _onDragStart: MouseEventHandler<HTMLDivElement> = useCallback((e) => {
-    cachedSizes.current = sizes
+    cachedSizes.current = sizeRatios
     setIsDragging(true)
     onDragStart(e)
-  }, [onDragStart, sizes])
+  }, [onDragStart, sizeRatios])
 
   const _onDragEnd: MouseEventHandler<HTMLDivElement> = useCallback((e) => {
-    cachedSizes.current = sizes
+    cachedSizes.current = sizeRatios
     setIsDragging(false)
     onDragEnd?.(e)
-  }, [onDragEnd, sizes])
+  }, [onDragEnd, sizeRatios])
 
   const _onDragging: MouseEventHandler<HTMLDivElement> = (e) => {
     const curPositionX = e.pageX
-    const diffX = curPositionX - sizes[0]
+    const subRatio = (curPositionX / wrapperRect['width']) * 100
 
-    const nextSizes = [...sizes]
+    const nextSizes = [subRatio, 100 - subRatio]
 
     if (curPositionX < MIN_SUB_VIEW_SIZE) {
-      nextSizes[0] = MIN_SUB_VIEW_SIZE
-      nextSizes[1] = wrapperRect['width'] - MIN_SUB_VIEW_SIZE
+      nextSizes[0] = (MIN_SUB_VIEW_SIZE / wrapperRect['width']) * 100
+      nextSizes[1] = 100 - nextSizes[0]
     } else if (curPositionX > MAX_SUB_VIEW_SIZE) {
-      nextSizes[0] = MAX_SUB_VIEW_SIZE
-      nextSizes[1] = wrapperRect['width'] - MAX_SUB_VIEW_SIZE
+      nextSizes[0] = (MAX_SUB_VIEW_SIZE / wrapperRect['width']) * 100
+      nextSizes[1] = 100 - nextSizes[0]
     } else {
-      nextSizes[0] += diffX
-      nextSizes[1] -= diffX
+      nextSizes[0] = subRatio
+      nextSizes[1] = 100 - subRatio
     }
 
-    setSizes(nextSizes)
+    setSizeRatios(nextSizes)
     onDragging?.(nextSizes)
   }
 
@@ -94,13 +84,15 @@ function SplitView({
 
   const renderStyledChild = useCallback((childNode: JSX.Element, childIndex: number) => (
     React.cloneElement(childNode, {
-      style: { flexBasis: sizes[childIndex] }
+      style: { flexBasis: `${sizeRatios[childIndex]}%` }
     })
-  ), [sizes])
+  ), [sizeRatios])
 
   if (wrapperRect['width'] <= MOBILE_SCREEN_MAX_WIDTH) {
     return children[1]
-}
+  }
+
+  const resizerPos = (sizeRatios[0] * wrapperRect['width'] / 100) - RESIZER_WIDTH / 2
 
   return (
     <div
@@ -117,7 +109,7 @@ function SplitView({
         onDragEnd={_onDragEnd}
         onDragging={_onDragging}
         style={{
-          transform: `translateX(${(sizes[0]) - RESIZER_WIDTH / 2}px)`,
+          transform: `translateX(${resizerPos}px)`,
         }}
       />
     </div>
