@@ -1,0 +1,36 @@
+@import '@styles/global.scss';
+
+.enter {
+  position: absolute;
+  max-width: 30%;
+  opacity: 0;
+}
+
+.enter-active {
+  position: absolute;
+  max-width: 30%;
+  opacity: 1;
+  transition: opacity $main-transition-duration ease-in-out;
+}
+
+.enter-done {
+  position: initial;
+  opacity: 1;
+}
+
+.exit {
+  opacity: 1;
+}
+
+.exit-active {
+  opacity: 0;
+  transition: opacity $main-transition-duration ease-in-out;
+}
+
+.exit-done {
+  opacity: 0;
+}
+
+.transition-wrapper {
+  box-sizing: border-box;
+}

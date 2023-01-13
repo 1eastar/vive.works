@@ -18,7 +18,7 @@ interface SeoProps {
 	children?: React.ReactNode
 }
 
-// NOTE: pages가 아닌 component에는 아직 HEAD api를 사용할 수 없어서 react-helmet으로 대체
+// NOTE: pages가 아닌 template에는 아직 HEAD api를 사용할 수 없어서 react-helmet으로 대체
 function Seo({
 	lang = 'ko',
 	title,
@@ -48,7 +48,7 @@ function Seo({
 			<meta name='description' content={_description} />
 			<meta name='author' content={_author} />
 			<meta name='date' content={date} />
-			<meta property='og:title' content={title} />
+			<meta property='og:title' content={_title} />
 			<meta property='og:description' content={_description} />
       <meta property='og:site_name' content='vive works' />
       <meta property='og:image' content={_image} />

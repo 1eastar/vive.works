@@ -6,7 +6,6 @@ import type { MDXComponents } from 'mdx/types'
 /* Internal */
 import { PostTemplateQueryResult } from '@commons/types/QueryType'
 import Seo from '@components/Seo'
-import Layout from '@components/Layout'
 import PostHead from '@components/PostHead'
 import Utterance from '@components/Utterance'
 import * as Tags from './tags'
@@ -52,7 +51,7 @@ const PostTemplate = ({ data, children }: PostTemplateProps) => {
   } = mdx
 
   return (
-    <Layout>
+    <>
       <Seo
         title={title}
         description={description}
@@ -71,7 +70,7 @@ const PostTemplate = ({ data, children }: PostTemplateProps) => {
         </MDXProvider>
         <Utterance />
       </div>
-    </Layout>
+    </>
   )
 }
 

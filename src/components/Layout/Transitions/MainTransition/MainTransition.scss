@@ -1,0 +1,66 @@
+@import '@styles/global.scss';
+
+$translate-y: 500px;
+
+.index-enter {
+  opacity: 0;
+}
+
+.index-enter-active {
+  opacity: 1;
+  transition: opacity $main-transition-duration ease-in-out;
+}
+
+.index-enter-done {
+  opacity: 1;
+}
+
+.index-exit {
+  opacity: 1;
+}
+
+.index-exit-active {
+  opacity: 0;
+  transition: opacity $main-transition-duration ease-in-out;
+}
+
+.index-exit-done {
+  opacity: 0;
+}
+
+
+.post-enter {
+  opacity: 0;
+  transform: translateY($translate-y);
+}
+
+.post-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all $main-transition-duration ease-in-out;
+}
+
+.post-enter-done {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.post-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.post-exit-active {
+  opacity: 0;
+  transform: translateY($translate-y);
+  transition: all $main-transition-duration ease-in-out;
+}
+
+.post-exit-done {
+  opacity: 0;
+  transform: translateY($translate-y);
+}
+
+.transition-wrapper {
+  box-sizing: border-box;
+}
