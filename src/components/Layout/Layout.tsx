@@ -11,7 +11,7 @@ import SubTransition from './Transitions/SubTransition'
 
 interface LayoutProps {
 	children: React.ReactNode
-	location?: Location
+	location: Location
 }
 
 function Layout({ children, location }: LayoutProps) {

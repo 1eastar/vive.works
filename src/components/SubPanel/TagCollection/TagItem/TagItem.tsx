@@ -5,19 +5,21 @@ import classNames from 'classnames'
 
 /* Internal */
 import { Tag } from '@utils/tag.utils'
-import { getQueryParamValue } from '@utils/browser.utils'
+import { getQueryParamValue, isBrowser } from '@utils/browser.utils'
 import * as styles from './TagItem.scss'
 
 function TagItem(tag: Tag) {
+  const queryParams = isBrowser ? window.location.search : ''
+
   const isCurrentTag = useMemo(() => {
-    const currentTagText = getQueryParamValue(window.location.search, 'tag')
+    const currentTagText = getQueryParamValue(queryParams, 'tag')
 
     if (currentTagText) {
       return tag.text === currentTagText.replace('#', '').trim()
     } else {
       return tag.text === 'All'
     }
-  }, [tag, window.location.search])
+  }, [tag, queryParams])
   
   const onClickItem = useCallback(() => {
     if (tag.text === 'All') {
