@@ -1,11 +1,10 @@
 /* External */
-import algoliasearch from 'algoliasearch/lite'
-import { useMemo } from 'react'
 import { InstantSearch } from 'react-instantsearch-dom'
 
 /* Internal */
 import SearchResult from './SearchResult'
 import SearchBox from './SearchBox'
+import { searchClient } from './Search.constant'
 
 interface SearchProps {
   index: {
@@ -16,15 +15,6 @@ interface SearchProps {
 function Search({
   index,
 }: SearchProps) {
-
-  const searchClient = useMemo(
-    () =>
-      algoliasearch(
-        process.env.GATSBY_ALGOLIA_APP_ID,
-        process.env.GATSBY_ALGOLIA_SEARCH_KEY
-      ),
-    []
-  )
 
   return (
     <InstantSearch

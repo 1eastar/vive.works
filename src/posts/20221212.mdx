@@ -277,6 +277,8 @@ https://medium.com/swlh/should-you-use-usememo-in-react-a-benchmarked-analysis-1
 ## index 페이지에서 최초 로딩 시 404 -> index 순으로 렌더링이 되어서 flick됨.
 gatsby serve 에서는 발생 안 함. 실 배포에서만 발생.
 https://github.com/gatsbyjs/gatsby/issues/5329 예전부터 이슈가 올라와있었음.
+해결함 -> HEAD api를 쓰니까 flickering이 발생했고, SEO 컴포넌트를 그냥 return() 안에 추가해주니 해결됨.
+
 
 // import scss에서 "* as" 를 안 붙이고도 사용할 수 있는데 세팅 어케함?
 // image 컴포넌트는 클릭 시 이미지 확대, 다시 클릭 or ESC 누를 시 원상 복귀. 뒷배경은 살짝 blur.
