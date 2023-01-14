@@ -10,7 +10,7 @@ module.exports = function(api) {
       {
         reactRuntime: 'automatic'
       },
-      'es2015',
+      'es2021',
     ],
     // gatsby-plugin-typescript 에 포함되어 있음.
     // `@babel/preset-typescript`
