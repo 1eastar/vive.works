@@ -1,6 +1,6 @@
 @import '@styles/global.scss';
 
-.TOCContainer {
+.TOC-container {
   padding: 22px 10px 0;
   height: 100%;
 
@@ -40,7 +40,7 @@
     }
   }
 
-  .TOCItemTitle {
+  .TOC-item-title {
     font-weight: bold;
     font-size: $font-size-xxs;
     color: var(--text-color-primary-30);

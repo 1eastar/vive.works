@@ -1,6 +1,6 @@
 @import '@styles/global.scss';
 
-.postHeadContainer {
+.post-head-container {
   width: 100%;
   height: auto;
   padding: 10px 0;
@@ -9,7 +9,7 @@
   align-items: flex-end;
   cursor: default;
   
-  .postTitle {
+  .post-title {
     font-family: $main-font;
     font-weight: bold;
     font-size: $font-size-title;
@@ -18,7 +18,7 @@
     padding: 10px 0;
   }
 
-  .postInfo{
+  .post-info{
     display: flex;
     font-family: $main-font;
     font-size: $font-size-m;
@@ -34,12 +34,12 @@
     }
   }
 
-  .postTagsWrapper {
+  .post-tags-wrapper {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     
-    .postTags {
+    .post-tags {
       display: flex;
       flex-direction: row;
       padding: 10px 0;

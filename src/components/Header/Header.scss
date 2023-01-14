@@ -28,7 +28,7 @@
       .red {
         background-color: var(--mac-header-red);
 
-        .svgIcon {
+        .svg-icon {
           width: 11px;
           height: 11px;
           fill: rgba(0, 0, 0, .6);
@@ -39,7 +39,7 @@
       .yellow {
         background-color: var(--mac-header-yellow);
 
-        .svgIcon {
+        .svg-icon {
           width: 9px;
           height: 9px;
           fill: rgba(0, 0, 0, .6);
@@ -50,7 +50,7 @@
       .green {
         background-color: var(--mac-header-green);
 
-        .svgIcon {
+        .svg-icon {
           width: 9px;
           height: 9px;
           fill: rgba(0, 0, 0, .6);
@@ -59,13 +59,13 @@
       }
 
       &:hover {
-        .svgIcon {
+        .svg-icon {
           display: block;
         }
       }
     }
 
-    .viveWorks {
+    .vive-works {
       text-decoration: none;
       color: var(--mac-header-text-color);
       font-size: $font-size-xxs;
@@ -78,7 +78,7 @@
   }
 }
 
-.svgIconWrapper {
+.svg-icon-wrapper {
   width: 13px;
   height: 13px;
   border-radius: 50%;

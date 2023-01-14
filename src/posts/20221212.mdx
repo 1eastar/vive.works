@@ -278,6 +278,13 @@ https://medium.com/swlh/should-you-use-usememo-in-react-a-benchmarked-analysis-1
 gatsby serve 에서는 발생 안 함. 실 배포에서만 발생.
 https://github.com/gatsbyjs/gatsby/issues/5329 예전부터 이슈가 올라와있었음.
 해결함 -> HEAD api를 쓰니까 flickering이 발생했고, SEO 컴포넌트를 그냥 return() 안에 추가해주니 해결됨.
+The "404 flickering error" you're encountering when using the Gatsby HEAD API is likely caused by the fact that Gatsby uses the HEAD method to pre-fetch data for pages before the client navigates to them. This can cause the 404 page to be displayed briefly before the intended page is loaded.
+There are a few things you can try to fix this issue:
+Use the onPreFetchPathname hook to disable pre-fetching for specific pages.
+Use the onClientEntry hook to disable pre-fetching for all pages, and then re-enable it after a short delay.
+Use the gatsby-browser.js file to disable pre-fetching for all pages and then re-enable it after a short delay.
+You can use a componentDidMount lifecycle method in your 404 page component to redirect immediately after a short delay to the index page.
+You can use gatsby-ssr to set the open graph data at the server side. This will ensure that the data is set before the first render, preventing the flicker.
 
 
 // import scss에서 "* as" 를 안 붙이고도 사용할 수 있는데 세팅 어케함?

@@ -1,6 +1,6 @@
 @import '@styles/global.scss';
 
-.codeContainer {
+.code-container {
   margin: 10px;
   height: auto;
   width: auto;
@@ -9,7 +9,7 @@
   padding: 10px 6px;
   letter-spacing: 0.7px;
 
-  .codeLine {
+  .code-line {
     display: table-row;
     line-height: 1.3em;
     height: 1.3em;
