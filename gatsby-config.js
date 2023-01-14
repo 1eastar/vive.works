@@ -60,9 +60,8 @@ module.exports = {
     {
       resolve: 'gatsby-plugin-sass',
       options: {
-        sassRuleTest: /.^/,
+        // sassRuleTest: /.^/,
         sassRuleModulesTest: /\.s(a|c)ss$/,
-        useResolveUrlLoader: true,
       },
     },
 		'gatsby-plugin-react-helmet',

@@ -1,3 +1,4 @@
+/* Internal */
 import * as styles from './Paragraph.scss'
 
 interface ParagraphProps {
