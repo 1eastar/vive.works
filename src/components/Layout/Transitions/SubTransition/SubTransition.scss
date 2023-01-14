@@ -1,15 +1,19 @@
 @import '@styles/global.scss';
 
+@mixin active() {
+  width: 100%;
+  transition: opacity $sub-transition-duration ease-in-out;
+}
+
 .enter {
   position: absolute;
   opacity: 0;
 }
 
 .enter-active {
+  @include active();
   position: absolute;
-  width: 100%;
   opacity: 1;
-  transition: opacity $main-transition-duration ease-in-out;
 }
 
 .enter-done {
@@ -22,9 +26,8 @@
 }
 
 .exit-active {
+  @include active();
   opacity: 0;
-  width: 100%;
-  transition: opacity $main-transition-duration ease-in-out;
 }
 
 .exit-done {
