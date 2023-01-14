@@ -30,6 +30,7 @@ export const createPages: GatsbyNode['createPages'] = async ({ actions, graphql,
 
 	if (errors || !data) {
 		reporter.panicOnBuild('Error loading MDX result', errors)
+		return
 	}
 
 	data!.allMdx.nodes.forEach((node) => {
