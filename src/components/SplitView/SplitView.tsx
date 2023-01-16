@@ -37,7 +37,7 @@ function SplitView({
   onDragEnd = noop,
   onDragging = noop,
 }: SplitViewProps) {
-  const cachedSizes = useRef<number[]>([])
+  const cachedSizeRatios = useRef<number[]>([])
   const [wrapperRect, setWrapperRect] = useState({})
   const [isDragging, setIsDragging] = useState(false)
   const [sizeRatios, setSizeRatios] = useState<number[]>([subPanelRatio, 100 - subPanelRatio])
@@ -47,13 +47,13 @@ function SplitView({
   })
 
   const _onDragStart: MouseEventHandler<HTMLDivElement> = useCallback((e) => {
-    cachedSizes.current = sizeRatios
+    cachedSizeRatios.current = sizeRatios
     setIsDragging(true)
     onDragStart(e)
   }, [onDragStart, sizeRatios])
 
   const _onDragEnd: MouseEventHandler<HTMLDivElement> = useCallback((e) => {
-    cachedSizes.current = sizeRatios
+    cachedSizeRatios.current = sizeRatios
     setIsDragging(false)
     onDragEnd?.(e)
   }, [onDragEnd, sizeRatios])
@@ -62,37 +62,37 @@ function SplitView({
     const curPositionX = e.pageX
     const subRatio = (curPositionX / wrapperRect['width']) * 100
 
-    const nextSizes = [subRatio, 100 - subRatio]
+    const nextSizeRatios = [subRatio, 100 - subRatio]
 
     if (curPositionX < MIN_SUB_VIEW_SIZE) {
-      nextSizes[0] = (MIN_SUB_VIEW_SIZE / wrapperRect['width']) * 100
-      nextSizes[1] = 100 - nextSizes[0]
+      nextSizeRatios[0] = (MIN_SUB_VIEW_SIZE / wrapperRect['width']) * 100
+      nextSizeRatios[1] = 100 - nextSizeRatios[0]
     } else if (curPositionX > MAX_SUB_VIEW_SIZE) {
-      nextSizes[0] = (MAX_SUB_VIEW_SIZE / wrapperRect['width']) * 100
-      nextSizes[1] = 100 - nextSizes[0]
+      nextSizeRatios[0] = (MAX_SUB_VIEW_SIZE / wrapperRect['width']) * 100
+      nextSizeRatios[1] = 100 - nextSizeRatios[0]
     } else {
-      nextSizes[0] = subRatio
-      nextSizes[1] = 100 - subRatio
+      nextSizeRatios[0] = subRatio
+      nextSizeRatios[1] = 100 - subRatio
     }
 
-    setSizeRatios(nextSizes)
-    onDragging?.(nextSizes)
+    setSizeRatios(nextSizeRatios)
+    onDragging?.(nextSizeRatios)
   }
 
-  /* for performance, use 'sizesForPerformance' instead of 'sizes' */
-  // const sizesForPerformance = isDragging ? cachedSizes.current : sizes
+  /* for performance, use 'enhancedSizeRatios' instead of 'sizeRatios' */
+  // const enhancedSizeRatios = isDragging ? cachedSizeRatios.current : sizeRatios
 
   const renderStyledChild = useCallback((childNode: JSX.Element, childIndex: number) => (
     React.cloneElement(childNode, {
       style: { flexBasis: `${sizeRatios[childIndex]}%` }
     })
   ), [sizeRatios])
+  
+  const resizerPos = (sizeRatios[0] * wrapperRect['width'] / 100) - RESIZER_WIDTH / 2
 
   if (wrapperRect['width'] <= MOBILE_SCREEN_MAX_WIDTH) {
     return children[1]
   }
-
-  const resizerPos = (sizeRatios[0] * wrapperRect['width'] / 100) - RESIZER_WIDTH / 2
 
   return (
     <div
