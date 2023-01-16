@@ -12,8 +12,6 @@ module.exports = function(api) {
       },
       'es2021',
     ],
-    // gatsby-plugin-typescript 에 포함되어 있음.
-    // `@babel/preset-typescript`
   ]
 
   const plugins = []
