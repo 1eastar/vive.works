@@ -1,5 +1,5 @@
 /* Internal */
-import Layout from '@components/Layout/Layout'
+import Layout from '@components/Layout'
 import '@styles/reset.css'
 
 export function wrapPageElement({ element, props }) {
