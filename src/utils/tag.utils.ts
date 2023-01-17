@@ -7,7 +7,6 @@ export interface Tag {
 }
 
 export function changeAllMdxToTagCollection({ allMdx }: TagQueryResult): Tag[] {
-  let total = 0
   const tagMap = new Map<string, number>()
 
   allMdx.nodes.forEach(node => {
@@ -17,11 +16,10 @@ export function changeAllMdxToTagCollection({ allMdx }: TagQueryResult): Tag[] {
       } else {
         tagMap.set(tag, 1)
       }
-      total++
     })
   })
 
-  const tagList: Tag[] = [ { text: 'All', count: total } ]
+  const tagList: Tag[] = [ { text: 'All', count: allMdx.nodes.length } ]
   tagMap.forEach((value, key) => {
     tagList.push({
       text: key,

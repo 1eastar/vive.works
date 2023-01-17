@@ -10,6 +10,7 @@
     width: 3px;
     background-color: var(--grey500);
     margin: 0 5px;
+    flex-shrink: 0;
   }
 
   .quote {

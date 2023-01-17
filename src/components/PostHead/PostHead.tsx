@@ -22,7 +22,7 @@ function PostHead({
         { title }
       </div>
       <div className={styles.postInfo}>
-        { date } &middot; <ClockIcon /> { timeToRead }
+        { date } &middot;&nbsp; <ClockIcon /> { timeToRead }
       </div>
       <div className={styles.postTagsWrapper}>
         <div className={styles.postTags}>
