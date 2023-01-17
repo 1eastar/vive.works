@@ -9,8 +9,8 @@ module.exports = function(api) {
         modules: false,
         loose: true,
       },
-      'es2021',
     ],
+    'es2021',
   ]
 
   const plugins = []
