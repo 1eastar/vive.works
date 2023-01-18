@@ -5,10 +5,11 @@
   position: fixed;
   top: 0;
   width: 100vw;
-  height: 22px;
+  height: 28px;
   border-bottom: 1px solid var(--mac-header-border-color);
   background: var(--mac-header-bg-color);
   z-index: $header-z-index;
+  box-shadow: 0 2px 8px var(--mac-header-shadow-color);
 
   .wrapper {
     display: flex;
@@ -68,7 +69,8 @@
     .vive-works {
       text-decoration: none;
       color: var(--mac-header-text-color);
-      font-size: $font-size-xxs;
+      font-size: $font-size-xs;
+      font-weight: bold;
       justify-self: flex-start;
     }
 
@@ -79,8 +81,8 @@
 }
 
 .svg-icon-wrapper {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   display: flex;
   align-items: center;

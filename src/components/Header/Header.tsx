@@ -43,7 +43,7 @@ function Header() {
 					to='/'
 					className={styles.viveWorks}
 				>
-					vive kang&rsquo;s works
+					Vive kang&rsquo;s works
 				</Link>
 				<div className={styles.dummy} /> {/* dummy for space-between */}
 			</div>

@@ -8,12 +8,13 @@
   --highlight-color-green: #3cb671;
   --highlight-color-orange: rgba(247, 148, 30, 1);
 
-  --mac-header-red: rgba(238, 108, 96, 1);
-  --mac-header-yellow: rgba(246, 192, 80, 1);
-  --mac-header-green: rgba(100, 201, 86, 1);
-  --mac-header-bg-color: linear-gradient(rgba(229, 229, 229, 1), rgba(205, 205, 205, 1));
-  --mac-header-text-color: rgba(110, 110, 110, 1);
-  --mac-header-border-color: rgba(178, 178, 178, 1);
+  --mac-header-red: rgba(237, 106, 94, 1);
+  --mac-header-yellow: rgba(245, 189, 79, 1);
+  --mac-header-green: rgba(98, 195, 84, 1);
+  --mac-header-bg-color: rgba(242, 237, 235, 1);
+  --mac-header-text-color: rgba(74, 71, 71, 1);
+  --mac-header-border-color: rgba(197, 191, 189, 1);
+  --mac-header-shadow-color: rgba(0, 0, 0, .2);
 
   --left-panel-bg-color: rgba(246, 246, 246, 1);
   --left-panel-bg-color-70: rgba(246, 246, 246, .7);
@@ -23,10 +24,12 @@
   --left-panel-item-text-color: rgba(101, 101, 101, 1);
 
   --right-panel-bg-color: rgba(255, 255, 255, 1);
-  --code-bg-color: #F7F7F7;
+  --right-panel-shadow-color: rgba(0, 0, 0, .2);
 
   --split-view-resizer-color: #d2d2d7;
-
+  
+  --code-bg-color: #F7F7F7;
+  
   --hover-bg-color: rgba(215, 214, 215, 1);
 
   // grey shades
@@ -69,12 +72,13 @@
     --highlight-color-green: #38A768;
     --highlight-color-orange: rgba(247, 148, 30, 1);
 
-    --mac-header-red: rgba(238, 108, 96, 1);
-    --mac-header-yellow: rgba(246, 192, 80, 1);
-    --mac-header-green: rgba(112, 187, 69, 1);
-    --mac-header-bg-color: linear-gradient(rgba(65, 66, 67, 1), rgba(53, 53, 55, 1));
-    --mac-header-text-color: rgba(172, 172, 173, 1);
-    --mac-header-border-color: rgba(21, 21, 22, 1);
+    --mac-header-red: rgba(238, 105, 94, 1);
+    --mac-header-yellow: rgba(245, 189, 79, 1);
+    --mac-header-green: rgba(98, 195, 84, 1);
+    --mac-header-bg-color: rgba(69, 64, 62, 1);
+    --mac-header-text-color: rgba(189, 180, 187, 1);
+    --mac-header-border-color: rgba(45, 43, 43, 1);
+    --mac-header-shadow-color: rgba(0, 0, 0, .35);
 
     --left-panel-bg-color: rgba(44, 46, 48, 1);
     --left-panel-bg-color-70: rgba(44, 46, 48, .7);
@@ -84,11 +88,12 @@
     --left-panel-item-text-color: rgba(176, 177, 177, 1);
 
     --right-panel-bg-color: rgba(31, 32, 34, 1);
-    --code-bg-color: #28292B;
+    --right-panel-shadow-color: rgba(0, 0, 0, 1);
 
     --split-view-resizer-color: #d7d7d280;
+    
+    --code-bg-color: #28292B;
 
     --hover-bg-color: rgba(75, 77, 79, 1);
-
   }
 }
