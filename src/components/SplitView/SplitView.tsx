@@ -32,7 +32,7 @@ interface SplitViewProps {
 
 function SplitView({
   children,
-  subPanelRatio = 25,
+  subPanelRatio = 20,
   onDragStart = noop,
   onDragEnd = noop,
   onDragging = noop,
