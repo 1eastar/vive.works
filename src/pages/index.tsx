@@ -8,10 +8,11 @@ import { searchIndex } from '@components/Search/Search.constant'
 const IndexPage = () => {
   return (
     <>
-      <Seo />
       <Search index={searchIndex}/>
     </>
   )
 }
+
+export const Head = () => <Seo />
 
 export default IndexPage

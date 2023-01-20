@@ -44,7 +44,7 @@ function Seo({
 			titleTemplate={`%s | ${SITE_TITLE}`}
 		>
 			<html lang={lang} />
-			<title>{_title}</title>
+			{ title && <title>{ title }</title> }
 			<meta name='description' content={_description} />
 			<meta name='author' content={_author} />
 			<meta name='date' content={date} />
