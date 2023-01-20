@@ -70,7 +70,7 @@
     "typecheck": "tsc --noEmit",
     "lint-staged": "lint-staged",
     "precommit-msg": "echo ' > 테스트 코드를 실행 중입니다...' && exit 0",
-    "postinstall": "husky install"
+    "prepare": "husky install"
   },
   "engines": {
     "node": "18.12.0",
