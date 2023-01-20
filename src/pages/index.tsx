@@ -7,9 +7,7 @@ import { searchIndex } from '@components/Search/Search.constant'
 
 const IndexPage = () => {
   return (
-    <>
-      <Search index={searchIndex}/>
-    </>
+    <Search index={searchIndex}/>
   )
 }
 
