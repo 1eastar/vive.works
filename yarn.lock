@@ -6187,6 +6187,20 @@ gatsby-react-router-scroll@^6.4.0:
     "@babel/runtime" "^7.20.7"
     prop-types "^15.8.1"
 
+gatsby-remark-copy-linked-files@^6.4.0:
+  version "6.4.0"
+  resolved "https://registry.yarnpkg.com/gatsby-remark-copy-linked-files/-/gatsby-remark-copy-linked-files-6.4.0.tgz#2522a286c0f5555262bf3c34d5a6cbfc59995e89"
+  integrity sha512-Ukw+Ksf5Ef4VMPNY5bTrLyBT/MzC+y8uExxBRwrcV3PvWxs4BzLdbbqu+dMwzyrxtAFvPCXI35g1dFoM/ofQUQ==
+  dependencies:
+    "@babel/runtime" "^7.20.7"
+    cheerio "^1.0.0-rc.10"
+    fs-extra "^10.1.0"
+    is-relative-url "^3.0.0"
+    lodash "^4.17.21"
+    path-is-inside "^1.0.2"
+    probe-image-size "^7.2.3"
+    unist-util-visit "^2.0.3"
+
 gatsby-remark-images@^7.2.0:
   version "7.4.0"
   resolved "https://registry.yarnpkg.com/gatsby-remark-images/-/gatsby-remark-images-7.4.0.tgz#8924b7ef1a7230a05adc856e4cc4defaa36084a3"
@@ -9723,6 +9737,11 @@ path-is-absolute@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/path-is-absolute/-/path-is-absolute-1.0.1.tgz#174b9268735534ffbc7ace6bf53a5a9e1b5c5f5f"
   integrity sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==
+
+path-is-inside@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/path-is-inside/-/path-is-inside-1.0.2.tgz#365417dede44430d1c11af61027facf074bdfc53"
+  integrity sha512-DUWJr3+ULp4zXmol/SZkFf3JGsS9/SIv+Y3Rt93/UjPpDpklB5f1er4O3POIbUuUJ3FXgqte2Q7SrU6zAqwk8w==
 
 path-key@^2.0.0, path-key@^2.0.1:
   version "2.0.1"
