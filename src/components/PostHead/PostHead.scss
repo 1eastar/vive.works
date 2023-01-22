@@ -16,6 +16,10 @@
     text-align: right;
     color: var(--text-color-primary);
     padding: 10px 0;
+
+    @media (max-width: 800px) {
+      font-size: $font-size-title-mobile;
+    }
   }
 
   .post-info{
@@ -26,6 +30,10 @@
     vertical-align: middle;
     color: var(--text-color-primary-30);
     padding: 10px 0;
+
+    @media (max-width: 800px) {
+      font-size: $font-size-s;
+    }
 
     svg {
       rect, path {

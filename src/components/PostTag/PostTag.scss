@@ -16,6 +16,10 @@
   font-size: $font-size-s;
   color: var(--highlight-color-green);
 
+  @media (max-width: 800px) {
+    font-size: $font-size-xs;
+  }
+
   &.click-enabled {
     transition: box-shadow 0.1s ease-in-out;
     cursor: pointer;
