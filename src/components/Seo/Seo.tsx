@@ -1,11 +1,8 @@
 /* External */
 import React from 'react'
-import { Helmet } from 'react-helmet'
 
 /* Internal */
-import { useSiteMetadata } from '@hooks/useSiteMetadata.hook'
-
-const SITE_TITLE = 'Vive works'
+import { defaultMetaData } from './Seo.constant'
 
 interface SeoProps {
 	lang?: string
@@ -29,20 +26,16 @@ function Seo({
 	slug,
 	children,
 }: SeoProps) {
-	const { site: { siteMetadata: _siteMetadata } } = useSiteMetadata()
 
-	const _description = description ?? _siteMetadata.description
-	const _title = title ??  _siteMetadata.title
-	const _author = author ?? _siteMetadata.author
-	const _image = image ?? _siteMetadata.image
+	const _title = title ? `${title} | ${defaultMetaData.TITLE}` : defaultMetaData.TITLE
+	const _description = description ?? defaultMetaData.DESCRIPTION
+	const _author = author ?? defaultMetaData.AUTHOR
+	const _image = image ?? defaultMetaData.IMAGE
 	const _slug = slug ?? ''
-	const _url = _siteMetadata.siteUrl + _slug
+	const _url = defaultMetaData.SITEURL + _slug
 
 	return (
-		<Helmet
-			defaultTitle={SITE_TITLE}
-			titleTemplate={`%s | ${SITE_TITLE}`}
-		>
+		<>
 			<html lang={lang} />
 			{ title && <title>{ title }</title> }
 			<meta name='description' content={_description} />
@@ -55,7 +48,7 @@ function Seo({
       <meta property='og:type' content='website' />
 			<meta property='og:url' content={_url}/>
 			{children}
-		</Helmet>
+		</>
 	)
 }
 
