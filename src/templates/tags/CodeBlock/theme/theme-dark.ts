@@ -13,36 +13,27 @@ const theme: PrismTheme = {
       types: ['changed'],
       style: {
         color: 'rgb(162, 191, 252)',
+        fontStyle: 'italic',
       },
     },
     {
       types: ['deleted'],
       style: {
         color: 'rgba(239, 83, 80, 0.56)',
+        fontStyle: 'italic',
       },
     },
     {
-      types: ['inserted', 'attr-name', 'attr-value'],
+      types: ['inserted', 'attr-name'],
       style: {
         color: 'rgb(173, 219, 103)',
-      },
-    },
-    {
-      types: ['attr-name', 'number'],
-      style: {
-        color: '#d19a66',
-      },
-    },
-    {
-      types: ['spread'],
-      style: {
-        color: '#56B6C2',
+        fontStyle: 'italic',
       },
     },
     {
       types: ['comment'],
       style: {
-        color: '#7c858d',
+        color: 'rgb(99, 119, 119)',
       },
     },
     {
@@ -58,9 +49,15 @@ const theme: PrismTheme = {
       },
     },
     {
+      types: ['number'],
+      style: {
+        color: 'rgb(247, 140, 108)',
+      },
+    },
+    {
       types: ['builtin', 'char', 'constant', 'function'],
       style: {
-        color: '#61AFEF',
+        color: 'rgb(130, 170, 255)',
       },
     },
     {
@@ -68,7 +65,7 @@ const theme: PrismTheme = {
       // so that punctuations are not italicised
       types: ['punctuation'],
       style: {
-        color: '#ABB2BF',
+        color: 'rgb(199, 146, 234)',
       },
     },
     {
@@ -78,27 +75,27 @@ const theme: PrismTheme = {
       },
     },
     {
-      types: ['class-name', 'script'],
+      types: ['class-name'],
       style: {
-        color: '#E06C75',
+        color: 'rgb(255, 203, 139)',
       },
     },
     {
-      types: ['tag', 'keyword'],
+      types: ['tag', 'operator', 'keyword'],
       style: {
-        color: '#C678DD',
-      },
-    },
-    {
-      types: ['operator'],
-      style: {
-        color: '#98c376',
+        color: 'rgb(127, 219, 202)',
       },
     },
     {
       types: ['boolean'],
       style: {
         color: 'rgb(255, 88, 116)',
+      },
+    },
+    {
+      types: ['property'],
+      style: {
+        color: 'rgb(128, 203, 196)',
       },
     },
     {

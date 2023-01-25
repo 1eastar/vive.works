@@ -6,59 +6,90 @@ import type { PrismTheme } from 'prism-react-renderer'
 const theme: PrismTheme = {
   plain: {
     color: '#403f53',
-    backgroundColor: '#F7F7F7'
+    backgroundColor: '#F7F7F7',
   },
-  styles: [{
-    types: ['changed'],
-    style: {
-      color: 'rgb(162, 191, 252)',
-    }
-  }, {
-    types: ['deleted'],
-    style: {
-      color: 'rgba(239, 83, 80, 0.56)',
-    }
-  }, {
-    types: ['inserted', 'attr-name', 'attr-value', 'spread'],
-    style: {
-      color: '#63A35C',
-    }
-  }, {
-    types: ['comment'],
-    style: {
-      color: 'rgb(152, 159, 177)',
-    }
-  }, {
-    types: ['string', 'builtin', 'char', 'constant', 'url', 'number', 'boolean'],
-    style: {
-      color: '#50A14F'
-    }
-  }, {
-    types: ['variable'],
-    style: {
-      color: 'rgb(201, 103, 101)'
-    }
-  }, {
-    types: ['punctuation'],
-    style: {
-      color: '#212529'
-    }
-  }, {
-    types: ['operator'],
-    style: {
-      color: '#0184BC'
-    }
-  }, {
-    types: ['function', 'selector', 'doctype'],
-    style: {
-      color: '#005CC5',
-    }
-  }, {
-    types: ['property', 'keyword', 'namespace', 'class-name', 'tag'],
-    style: {
-      color: '#A626A4'
-    }
-  }]
+  styles: [
+    {
+      types: ['changed'],
+      style: {
+        color: 'rgb(162, 191, 252)',
+      },
+    },
+    {
+      types: ['deleted'],
+      style: {
+        color: 'rgba(239, 83, 80, 0.56)',
+      },
+    },
+    {
+      types: ['inserted', 'attr-name'],
+      style: {
+        color: 'rgb(72, 118, 214)',
+      },
+    },
+    {
+      types: ['comment'],
+      style: {
+        color: 'rgb(152, 159, 177)',
+      },
+    },
+    {
+      types: ['string', 'builtin', 'char', 'constant', 'url'],
+      style: {
+        color: 'rgb(72, 118, 214)',
+      },
+    },
+    {
+      types: ['variable'],
+      style: {
+        color: 'rgb(201, 103, 101)',
+      },
+    },
+    {
+      types: ['number'],
+      style: {
+        color: 'rgb(170, 9, 130)',
+      },
+    },
+    {
+      // This was manually added after the auto-generation
+      // so that punctuations are not italicised
+      types: ['punctuation'],
+      style: {
+        color: 'rgb(153, 76, 195)',
+      },
+    },
+    {
+      types: ['function', 'selector', 'doctype'],
+      style: {
+        color: 'rgb(153, 76, 195)',
+      },
+    },
+    {
+      types: ['class-name'],
+      style: {
+        color: 'rgb(17, 17, 17)',
+      },
+    },
+    {
+      types: ['tag'],
+      style: {
+        color: 'rgb(153, 76, 195)',
+      },
+    },
+    {
+      types: ['operator', 'property', 'keyword', 'namespace'],
+      style: {
+        color: 'rgb(12, 150, 155)',
+      },
+    },
+    {
+      types: ['boolean'],
+      style: {
+        color: 'rgb(188, 84, 84)',
+      },
+    },
+  ],
 }
 
 export default theme
