@@ -36,14 +36,6 @@ interface PostTemplateProps extends PostTemplateQueryResult {
 const PostTemplate = ({ data, children }: PostTemplateProps) => {
   const { mdx } = data
   const {
-    frontmatter: {
-      title,
-      description,
-      author,
-      date,
-      image,
-      slug,
-    },
     fields: {
       timeToRead: {
         text,
@@ -53,14 +45,6 @@ const PostTemplate = ({ data, children }: PostTemplateProps) => {
 
   return (
     <>
-      <Seo
-        title={title}
-        description={description}
-        author={author}
-        date={date}
-        image={image}
-        slug={slug}
-      />
       <PostHead 
         {...mdx.frontmatter}
         timeToRead={text}
@@ -72,6 +56,30 @@ const PostTemplate = ({ data, children }: PostTemplateProps) => {
         <Utterance />
       </div>
     </>
+  )
+}
+
+export const Head = ({ data }: PostTemplateQueryResult) => {
+  const { mdx } = data
+  const {
+    frontmatter: {
+      title,
+      description,
+      author,
+      date,
+      image,
+      slug,
+    },
+  } = mdx
+  return (
+    <Seo
+      title={title}
+      description={description}
+      author={author}
+      date={date}
+      image={image}
+      slug={slug}
+    />
   )
 }
 

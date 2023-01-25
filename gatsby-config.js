@@ -70,7 +70,6 @@ module.exports = {
         sassRuleModulesTest: /\.s(a|c)ss$/,
       },
     },
-		'gatsby-plugin-react-helmet',
 		'babel-preset-gatsby',
 		{
       resolve: 'gatsby-plugin-typescript',
