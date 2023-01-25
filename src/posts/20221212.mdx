@@ -24,7 +24,7 @@ tags: ["Gatsby", "Web"]
 그 효과는 굉장했다! 디자인을 하고 코드를 작성하는 것과 맨바닥에서 시작하는 건 진짜 천지차이라는 걸 직접 체감할 수 있었다. 작업 속도가 훨씬 빨라지는 건 당연하고 개발할 때는 개발만, 디자인할 때는 디자인만 집중해서 한가지만 한다는 게 엄청난 메리트라고 느껴졌다. 
 
 # Gatsby
-Gatsby를 한번도 사용해본 적이 없기에 공식 문서부터 쭉 훑기 시작했다. 공식 문서가 엄청 친절하다고 느꼈다. 필요할 법한 기능들에 대해서 어떤 패키지를 쓰는 게 좋고, 어떤 플러그인을 쓰는 게 좋고... 등 gatsby 측에서 권장하는 방식에 대해 다 기술해 놓았다. 예를 들어, 검색 기능에는 [algoria search](https://www.gatsbyjs.com/docs/adding-search-with-algolia)를, 페이지 전체적인 layout 적용을 위해서는 [gatsby-plugin-layout](https://www.gatsbyjs.com/docs/adding-search-with-algolia) 이라는 플러그인을 추천한다. 물론 이게 무조건 좋은 점이라 보기는 어렵지만 수많은 플러그인들 속에서 선택지를 좁혀주는 건 정말 마음에 들었다.
+Gatsby를 한번도 사용해본 적이 없기에 공식 문서부터 쭉 훑기 시작했다. 공식 문서가 꽤 친절하다고 느꼈다. 필요할 법한 기능들에 대해서 어떤 패키지를 쓰는 게 좋고, 어떤 플러그인을 쓰는 게 좋고... 등 gatsby 측에서 권장하는 방식에 대해 다 기술해 놓았다. 예를 들어, 검색 기능에는 [algoria search](https://www.gatsbyjs.com/docs/adding-search-with-algolia)를, 페이지 전체적인 layout 적용을 위해서는 [gatsby-plugin-layout](https://www.gatsbyjs.com/docs/adding-search-with-algolia) 이라는 플러그인을 추천한다. 물론 이게 무조건 좋은 점이라 보기는 어렵지만 수많은 플러그인들 속에서 선택지를 좁혀주는 건 정말 마음에 들었다.
 
 그렇다고 마냥 쉬운 프레임워크라고 느껴지지 않았는데, gatsby를 사용하기 위해서는 gatsby 자체가 내부에서 어떻게 돌아가는지 잘 알아야 했다. graphql 사용법도 어느정도 알아야 하고, gatsby 만의 page query 방식, `gatsby-*` 파일들에 대한 내용 등 추가적으로 공부해야 할 게 꽤 있다는 느낌을 받았다. 그리고 플러그인도 몇몇을 제외하면 결국엔 gatsby 측에서 만든 게 아닌 개인 개발자들이 만든 거라 무작정 사용하기는 힘들었다. 그래서 내부 코드를 살펴보고 직접 구현할만한 것들은 직접 작성하는 식으로 하느라 좀 더디게 진행되었다.
 
@@ -50,7 +50,7 @@ Gatsby를 한번도 사용해본 적이 없기에 공식 문서부터 쭉 훑기
 
 ![404 flickering error](../statics/images/flickering_error.gif)
 
-이게 보기보다 큰 문제인게, 크롤러에서 홈 화면을 404 페이지로 인식해버린다. 즉, `<header>`에 들어있는 title, description, og 등 메타 데이터들이 404 페이지의 데이터로 잡힌다는 뜻이다. 비슷한 이슈가 있을까하고 찾아봤지만 역시 없었다. 몇 년 전부터 [이슈](https://github.com/gatsbyjs/gatsby/issues/5329)로 등록된 내용이 있긴 한데 추천을 가장 많이 받은 답변도 근본적인 해결책이 아니었다.
+이게 보기보다 큰 문제인게, 크롤러에서 홈 화면을 404 페이지로 인식해버린다. 즉, `<header>`에 들어있는 title, description, og 등 메타 데이터들이 404 페이지의 데이터로 잡힌다는 뜻이다. 비슷한 이슈가 있을까하고 찾아봤지만 없었다. 몇 년 전부터 [이슈](https://github.com/gatsbyjs/gatsby/issues/5329)로 등록된 내용이 있긴 한데 추천을 가장 많이 받은 답변도 근본적인 해결책이 아니었다.
 
 왠지 `react-helmet`과 gatsby `Head` 사이에 충돌이 있는 것 같아 패키지를 하나하나 살펴봤다. `react-helmet`은 기본적으로 DOM을 직접 수정한다. 간단히 표현하자면 예를 들어 `document.title = title` 같은 식이다. 그리고 함께 사용하는 `gatsby-plugin-react-helmet`에서 `gatsby-ssr`의 `onRenderBody`함수를 통해 빌드 시 정적 파일에 헤더가 포함되도록 설정해주고 있다. gatsby의 `Head` 도 같은 방식으로 `onRenderBody`에서 `setHeadComponents`를 이용한다.([discussion](https://github.com/gatsbyjs/gatsby/discussions/35841#discussioncomment-3179894)) `Head`가 컴포넌트도 아니고 Gatsby 내에서 로직을 살펴보기가 너무 힘들었기에, 그래서 그냥 `react-helmet` 패키지를 제거하고 `onRenderBody` 함수에서 내가 원하는 기능만 직접 만들어 MDX에 head tag를 주입해보자고 생각했다.
 
@@ -122,7 +122,7 @@ export interface RenderBodyArgs {
 
 우선, `loadPageDataSync`라는 함수는 인터페이스 내에 정의되어 있지만 공식 문서에는 없다. 그리고 이 함수는 production 환경에서만 존재하고 다른 환경에서는 에러가 발생한다. 물론 production에서는 아주 잘 작동한다. Gatsby 측 개발자의 관련 [답변](https://github.com/gatsbyjs/gatsby/discussions/35841#discussioncomment-3357209)을 보면 이 부분은 실수인 것 같다. 그리고 경험해본 바에 의하면, `headComponents` 리스트에 `<head>`에 들어갈 수 없는 태그가 하나라도 포함되어 있으면 전체 내용이 `<body>` 내부로 들어간다. 그리고 리스트들을 하나로 담고 있는 컴포넌트A를 만들어 A 하나만 리스트에 넣어놓아도 안 된다. 그 이유가 `<React.Fragment>`, `<>`도 내부적으로 하나의 태그로 인식하기 때문이다.
 
-이런저런 시도를 해보다가 결국 `pages/`에서도 `Head`를 사용하지 않고 `react-helmet`을 사용하기로 했다. 사실 처음부터 이렇게 하는 게 코드 측면에서나 정신건강 측면에서나 훨씬 깔끔하게 해결이 가능했다. 하지만 더 좋은 방법이 있지 않을까.. 분명 있을텐데.. 하는 마음으로 꼬박 이틀동안 issue/discussion 정주행을 하고 여러가지를 시도를 해보면서 알게 된 것도 배운 것도 많기에 꽤 재미있었다.
+이런저런 시도를 해보다가 결국 `pages/`에서도 `Head`를 사용하지 않고 `react-helmet`을 사용하기로 했다. 사실 처음부터 이렇게 하는 게 코드 측면에서나 정신건강 측면에서나 훨씬 깔끔하게 해결이 가능했다. 하지만 더 좋은 방법이 있지 않을까.. 분명 있을텐데.. 하는 마음으로 꼬박 이틀동안 github issue/discussion 정주행을 하고 여러가지를 시도를 해보면서 알게 된 것도 배운 것도 많기에 꽤 재미있었다.
 
 ---
 
@@ -160,14 +160,14 @@ acorn으로 파싱하는 부분에서 에러가 나는 게 확인되었다. `sou
 찾아보니 타입스크립트는 타입스크립트만의 AST 구조를 별도로 갖고 있다고 한다. 타입스크립트를 파싱해 AST를 만들고 이 AST를 통해 자바스크립트로 변환한다. 생각해보면 타입스크립트와 자바스크립트가 같은 AST 구조를 갖고 있다는 게 말이 안 된다. 같은 구조를 가지려면 타입스크립트 parser가 코드를 AST로 변환시킬 때부터 타입 관련 코드들을 전부 제외 시켜줘야 하는데 이건 parser의 영역이 아니라는 생각이 든다.
 
 ## pre commit
-lint 체크, type 체크, 테스트 실행 이 3가지는 자동화를 시켜놓지 않으면 자주 깜빡하기도 하고 때로는 번거롭기도 해서 종종 안 하고 넘어가게 된다. 그래서 아예 commit 할 때 이 3가지를 다 통과해야만 커밋이 되도록 git hook을 걸어 두었다. 처음에는 **`lint-staged`** 와 **`pre-commit`** 이라는 패키지를 이용했다. 패키지 자체도 괜찮아보였고 어차피 여러가지 git hook들 중에 pre commit 만 사용할 거니까. 다만 사용하는 내내 찜찜했던 건 last published가 6년 전이라는 것. 분명 더 괜찮은 게 나왔을텐데 하는 마음으로 좀 찾아보니 **`husky`** 라는 패키지가 있었다. **`pre-commit`** 패키지보다 훨씬 가벼우면서 모든 종류의 git hook을 지원하고 있었기에 교체를 안 할 이유가 없었고 바로 교체해주었다.
+lint 체크, type 체크, 테스트 실행 이 3가지는 자동화를 시켜놓지 않으면 자주 깜빡하기도 하고 때로는 번거롭기도 해서 종종 안 하고 넘어가게 된다. 그래서 아예 commit 할 때 이 3가지를 다 통과해야만 커밋이 되도록 git hook을 걸어 두었다. 처음에는 **`lint-staged`** 와 함께 **`pre-commit`** 이라는 패키지를 이용했다. 패키지 자체도 괜찮아보였고 어차피 여러가지 git hook들 중에 pre commit 만 사용할 거니까. 다만 사용하는 내내 찜찜했던 건 last published가 6년 전이라는 것. 분명 더 괜찮은 게 나왔을텐데 하는 마음으로 좀 찾아보니 **`husky`** 라는 패키지가 있었다. **`pre-commit`** 패키지보다 훨씬 가벼우면서 모든 종류의 git hook을 지원하고 있었기에 교체를 안 할 이유가 없었고 바로 교체해주었다.
 
 ```json
 "scripts": {
   "prepare": "husky install"
 },
 ```
-`husky` 세팅을 하면서 **life cycle scripts**에 대해 알게 되었다. `prepare`은 패키지를 설치한 후에 실행되는 script다. [yarn 문서](https://yarnpkg.com/advanced/lifecycle-scripts)와 [npm 문서](https://docs.npmjs.com/cli/v8/using-npm/scripts)에 다른 hook들도 소개되어 있는데 다 읽어보진 못 했고 시간날 때 한번 쭉 읽어봐야겠다.
+`husky` 세팅을 하면서 **life cycle scripts**에 대해 알게 되었다. `prepare`은 패키지를 설치한 후에 실행되는 script다. [yarn 문서](https://yarnpkg.com/advanced/lifecycle-scripts)와 [npm 문서](https://docs.npmjs.com/cli/v8/using-npm/scripts)에 다른 hook들도 소개되어 있는데 전부 다 읽어보진 못 했고 시간날 때 한번 쭉 읽어봐야겠다.
 
 # 마무리
 우여곡절 끝에 1차적으로 블로그를 완성했다. 배포까지 대략 한 달쯤 걸렸나? 블로그를 만들면서 정말 많이 배웠다. 오류를 해결해나가는 과정에서 새로운 내용도 많이 알게 되었고 기존에 애매하게 알던 내용들이 정리가 되기도 했다. 글이 너무 길어질까봐 이 글에 못 담은 내용들도 몇몇 있는데 다른 글에서 얼른 정리해보고 싶다.

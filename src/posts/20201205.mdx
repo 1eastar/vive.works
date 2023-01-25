@@ -1,0 +1,154 @@
+---
+id: "20201205"
+slug: "/20201205"
+title: "Redux saga"
+description: "제너레이터와 Redux-saga, 미들웨어에 대해 알아봅시다"
+author: "Vive Kang"
+date: "2020-12-05"
+image: ""
+tags: ["Redux"]
+
+---
+
+이 글은 예전 블로그에서 이전하면서 새로 다듬은 글입니다. 글을 옮겨적고 있는 2022년 1월 기준, 오랜만에 Redux 공식 문서를 살펴보니 업데이트가 많이 되었고 좋은 예시, 설명들도 많이 추가되어 있었습니다. 중복된 내용이거나 공식 문서의 설명이 더 낫다고 판단되는 것들은 과감하게 글에서 지우다보니 내용이 많이 줄었습니다.
+
+---
+
+# Generator
+뒤에 알아볼 Redux-saga의 기반이 되는 게 제너레이터이다. saga에서 어떻게 액션을 모니터링하고 있는지 알아보기 위해 간단하게 짚고 넘어가려 한다.
+
+## 제너레이터에 대한 간단한 설명
+`funtion*` 키워드를 통해 생성한 함수를 제너레이터 함수라고 한다. 제너레이터 함수는 제너레이터 객체를 반환하고 이 객체는 `next`라는 메서드를 가진다. 이 `next` 함수를 실행시키면 함수를 순차적으로 실행하다가 `yield` 키워드를 만나면 값을 반환한다. 여기서 반환되는 값은 `{ value: someValue, done: Boolean }` 형태이다. `value`는 `yield` 키워드 뒤에 오는 값을 반환해주고 `done`은 함수가 종료되었는지 여부를 알려준다. 간단히 말하자면, 제너레이터는 `yield`를 만날 때마다 일시정지가 되고 `next` 함수를 만나면 다시 실행이 되는 거라 볼 수 있다. `next` 함수의 인자로 값을 넣어주면 가장 최근에 yield된 값의 리턴 값이 된다. 말로만 들으면 이해하기 어려울 수 있는데 예시를 보면 쉽다.
+
+## 제너레이터 예제
+```js
+function* generatorFunc() {
+  let a, b
+  console.log('start!')
+  console.log(a = yield 10)
+  console.log(b = yield 20)
+  yield a + b
+}
+```
+
+이런 제너레이터 함수가 있을 때 흐름은 다음과 같다.
+
+```js
+const gen = generatorFunc() // generator 객체 반환
+
+gen.next()
+// start
+// { value: 10, done: false }
+
+gen.next(1)
+// 1
+// { value: 20, done: false }
+
+gen.next(2)
+// 2
+// { value: 3, done: false }
+
+gen.next(100000)
+// { value: undefined, done: true }
+```
+
+1. 제너레이터 객체를 반환한다.
+2. 첫번째 `next`의 호출에서 `console.log('start!')`가 실행되고 다음 라인의 `yield 10`을 만나 일시정지한다. 이때 `next`의 인자 값을 비워둔 이유는 `yield 10` 이전의 가장 최근 yield가 없기에 아무 영향이 없기 때문이다.
+3. 두번째 `next` 호출에서 인자 값으로 `1`을 넣어줬다. 이 값은 가장 최근에 있었던 yield 값의 리턴 값이 된다. 즉, 가장 가까운 yield 값(`yield 10`)이 `1`이 된다는 뜻이다. 결국 a = 1 이 되고 `console.log(a = 1)`이 동작해 1이 먼저 로그에 찍힌다. 그 후 다음 yield인 `yield 20`에서 일시정지하고 `{ value: 20, done: false }`을 반환한다.
+4. 세번째 `next` 호출에서 인자 값으로 `2`를 넣어줬다. 3단계와 동일한 과정으로 `console.log(b = 2)`가 실행되어 먼저 `2`가 로그에 찍힌다. 이후 다음 yield인 `yield a + b`를 만나는데 여태 과정으로 보면 `a = 1`, `b = 2`로 할당된 상태이기 때문에 `{ value: 3, done: false }`를 반환하고 일시정지한다.
+5. 이후 `next`를 통해 함수를 이어서 실행시켜주면 이후의 yield가 없기 때문에 `done: true` 가 반환된다.(제너레이터가 중간에 return을 만나도 `done: true`가 반환된다.)
+
+이 과정만 완벽히 이해된다면 충분하고 생각한다.
+
+## Redux saga 에서의 Generator
+saga에서는 기본적으로 제너레이터를 사용한다. 들어오는 액션을 모니터링할 때, while 무한 loop 안에서 액션을 기다리고 yield 키워드에 액션이 들어오면 로직을 실행한다. 즉, 대략 이런 식이다.
+
+```js
+function* watchSaga() {
+  while(true) {
+    const action = yield
+    if (action.type === 'ACTION_SUCCESS') {
+      console.log('ACTION 성공')
+    }
+    if (action.type === 'ACTION_ERROR') {
+      console.log('ACTION 에러')
+    }
+  }
+}
+```
+
+# Redux 미들웨어
+Redux에서 미들웨어는 기본적으로 다음과 같은 구조를 가진다
+
+```js
+const sampleMiddleware = store => next => action => {
+  // ...
+  return next(action)
+}
+```
+
+## 미들웨어 구조
+`store`는 Redux 스토어, `next`는 다음 미들웨어(혹은 리듀서)에게 액션을 전달하는 함수, `action`은 현재 이 미들웨어로 들어온 액션 데이터이다. 그리고 Redux는 여러 개의 미들웨어를 가질 수 있다. Redux의 대표적인 미들웨어인 Redux-saga를 예시로 보자면 다음과 같다.
+
+```js
+import { createStore, applyMiddleware } from 'redux'
+import createSagaMiddleware from 'redux-saga'
+
+import rootSagas from './rootSagas'
+
+const sagaMiddleware = createSagaMiddleware()
+const store = createStore(
+  reducer,
+  applyMiddleware(sagaMiddleware) // applyMiddleware(...middleware) 형태로 다수의 미들웨어를 이용할 수 있다.
+)
+
+sagaMiddleware.run(rootSaga)
+```
+
+미들웨어는 액션이 dispatch 되고 액션이 리듀서로 도달하기 전에 그 중간에 위치한다. 여러 개의 미들웨어가 있다면 `applyMiddleware` 함수에 넘겨준 미들웨어 순서대로 액션이 거쳐간다.(물론 아래의 middleware2에서 `next(action)`을 호출해주지 않고 있다면 middleware3 이후부터는 아무런 동작을 하지 않지만 이런 경우가 거의 없으니 무시한다.)
+* dispatch -> middleware1 -> middleware2 -> middleware3 ->  ... -> reducer
+
+## Redux saga
+대표적인 미들웨어인 Redux-saga는 어떻게 구현되어 있을까?
+
+```js
+function sagaMiddleware({ getState, dispatch }) {
+  /* ... */
+
+  return next => action => {
+    const result = next(action) // 다음 미들웨어(또는 리듀서)로 액션을 넘겨준다.
+    sagaChannel.put(action)  // Saga에 dispatch된 액션을 넘겨준다.
+    return result
+  }
+}
+```
+
+내부 로직을 단순화한 코드인데, saga에서는 다음 미들웨어(또는 리듀서)로 액션을 먼저 넘겨준 후에 saga 내부로 액션을 보낸다. 전체적인 흐름을 보기 위해 다음과 같은 간단한 generator 함수가 정의되어 있다고 하자.
+
+```js
+function* someActionSaga(action) {
+  try {
+    const result = yield call(AsyncCall, params)
+    yield put({ type: ACTION_SUCCESS, payload: result })
+  } catch (error) {
+    yield put({ type: ACTION_ERROR, payload: error })
+  }
+}
+
+export function* watchActionSaga() {
+  yield takeEvery(ACTION, someActionSaga)
+}
+```
+
+액션 `ACTION`이 dispatch 됐을 때의 흐름은 이렇다.
+
+1. `ACTION` dispatch
+2. saga 미들웨어에서 `ACTION`을 다음 미들웨어(또는 리듀서)로 보낸다.(이후 미들웨어(또는 리듀서)에서 작업을 이어나간다. ex. loading값을 true로 설정)
+3. `ACTION`이 saga 내부로 전달된다.
+4. `watchActionSaga`에서 `ACTION` 액션을 모니터링하다가 트리거 되는 순간 `someActionSaga` 함수를 실행한다.
+5. 비동기 Call 값과 함께 `ACTION_SUCCESS` 액션을 dispatch 하거나, 비동기 Call에서 에러 발생 시 `ACTION_ERROR`를 dispatch 한다.
+6. `ACTION_SUCCESS` 또는 `ACTION_ERROR` 액션은 다시 미들웨어들을 거쳐 리듀서로 도달한다.
+
+---
+
+잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.
