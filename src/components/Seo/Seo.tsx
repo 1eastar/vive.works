@@ -30,7 +30,7 @@ function Seo({
 	const _title = title ? `${title} | ${defaultMetaData.TITLE}` : defaultMetaData.TITLE
 	const _description = description ?? defaultMetaData.DESCRIPTION
 	const _author = author ?? defaultMetaData.AUTHOR
-	const _image = image ?? defaultMetaData.IMAGE
+	const _image = image.length !== 0 ? image : defaultMetaData.IMAGE
 	const _slug = slug ?? ''
 	const _url = defaultMetaData.SITEURL + _slug
 
