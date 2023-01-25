@@ -35,35 +35,96 @@ Gatsby를 한번도 사용해본 적이 없기에 공식 문서부터 쭉 훑기
 ### HEAD API
 `gatsby@4.19.0` 부터 `Head` api가 추가되었다. 기존에는 `react-helmet`이라는 외부 패키지로 주로 사용해왔던 페이지별 head tag를 설정해주는 기능을 담고 있다. [공식 사이트](https://www.gatsbyjs.com/docs/reference/built-in-components/gatsby-head/)에서도 `react-helmet`에 비해 여러 이점이 있으니 사용할 것을 권장한다.
 
-하지만 `react-helmet`을 사용했다. 모든 `.mdx` 파일에 공통적으로 적용되는 template을 사용 중이었고, template 컴포넌트는 page가 아니기 때문에 `Head` api를 사용할 수 없었다. 그래서 template 컴포넌트 내에서 일괄적으로 head tag를 적용하기 위해 `react-helmet`을 사용했다. 
-```jsx
-// example.mdx
----
-id: '1'
-title: 'post title'
----
+하지만 처음에는 `react-helmet`을 사용했다. `.mdx` template을 사용 중이었고, template 컴포넌트는 page가 아니기 때문에 `Head` api를 사용할 수 없다고 생각했다. 그래서 글 마다 다른 head tag를 적용하기 위해 `react-helmet`을 사용했다.
 
-<head>
-  <title>title</title>
-  <meta name='description' content="description..." />
-  ...
-</head>
-
-# Heading1
-...
-
-```
-
-물론 `.mdx` 파일 안에 이런 식으로 하나하나 세팅해줘도 되긴 하지만 매번 이렇게 하는 게 번거롭다고 생각했고 template에서 한번에 처리해주는 게 더 낫다고 생각했다.
+하지만 나중에 template에도 `Head`를 사용할 수 있다는 걸 알게 되면서 바로 `react-helmet` 패키지를 삭제해버렸다.
 
 ### flickering error
-template 컴포넌트에는 `react-helmet`을 사용했지만 `pages/`의 페이지들에는 `Head` api를 사용했다. 그러자 index 페이지에서 최초 로딩 시 404 flickering 에러가 발생했다.
+이 문제를 해결하려고 많은 시간을 투자했는데, 결국 template에도 `Head`를 사용하면서 문제가 해결되었다. 공식 문서 상의 `Head` 관련 예시들은 전부 `pages/` 파일들이고, MDX template에 대한 내용에서도 `Head`를 사용할 수 있다는 내용은 없다. 그리고 Gatsby 문서에도 page에만 사용 가능하다고 설명되어있다. 그래서 삽질을 굉장히 많이 했는데, discussion에 관련 질문을 남기니 template에도 사용 가능하다고 Gatsby 개발진에서 답변이 왔고 `pages/`에서만 사용 가능한 줄 알았다고 하니 이후 공식 문서가 수정되었다.([commit](https://github.com/gatsbyjs/gatsby/commit/e2b84887841f80a47fa705bfe1bbf5b4673677e1))
+
+아래는 template에서 `Head`를 사용할 수 없다고 알고 있을 때 작성한 내용이다.
+
+---
+
+`react-helmet`을 사용하여 `SEO` 컴포넌트를 만들었고, `SEO` 컴포넌트를 MDX template 내부와 `pages/`의 Head api에 동시에 사용했다. 그러자 index 페이지에서 최초 로딩 시 404 flickering 에러가 발생했다.
 
 ![404 flickering error](../statics/images/flickering_error.gif)
 
-이게 보기보다 큰 문제인게, 크롤러에서 홈 화면을 404 페이지로 인식해버린다. 즉, 홈 화면의 title, description, og 등 메타 데이터들이 404 페이지의 데이터로 잡힌다는 뜻이다. 몇 년 전부터 [이슈](https://github.com/gatsbyjs/gatsby/issues/5329)로 등록된 내용이 있긴 한데 추천을 가장 많이 받은 답변도 크게 도움이 안 되었다. 너무 해결이 안 되어서 하염없이 이것만 보고 있기 보단 잠시 손을 놓고 다른 작업부터 했다. 근데 나중에 다시 확인해보니 에러가 해결이 되어있더라. 흠...
+이게 보기보다 큰 문제인게, 크롤러에서 홈 화면을 404 페이지로 인식해버린다. 즉, `<header>`에 들어있는 title, description, og 등 메타 데이터들이 404 페이지의 데이터로 잡힌다는 뜻이다. 비슷한 이슈가 있을까하고 찾아봤지만 역시 없었다. 몇 년 전부터 [이슈](https://github.com/gatsbyjs/gatsby/issues/5329)로 등록된 내용이 있긴 한데 추천을 가장 많이 받은 답변도 근본적인 해결책이 아니었다.
 
-> 동일한 에러가 발생하고 있다면 도움이 될 지 모르겠지만 오류를 추적하는 데 도움을 드리고 싶습니다. 원인이 궁금해서 그런거라 댓글 남겨주시면 감사하겠습니다.
+왠지 `react-helmet`과 gatsby `Head` 사이에 충돌이 있는 것 같아 패키지를 하나하나 살펴봤다. `react-helmet`은 기본적으로 DOM을 직접 수정한다. 간단히 표현하자면 예를 들어 `document.title = title` 같은 식이다. 그리고 함께 사용하는 `gatsby-plugin-react-helmet`에서 `gatsby-ssr`의 `onRenderBody`함수를 통해 빌드 시 정적 파일에 헤더가 포함되도록 설정해주고 있다. gatsby의 `Head` 도 같은 방식으로 `onRenderBody`에서 `setHeadComponents`를 이용한다.([discussion](https://github.com/gatsbyjs/gatsby/discussions/35841#discussioncomment-3179894)) `Head`가 컴포넌트도 아니고 Gatsby 내에서 로직을 살펴보기가 너무 힘들었기에, 그래서 그냥 `react-helmet` 패키지를 제거하고 `onRenderBody` 함수에서 내가 원하는 기능만 직접 만들어 MDX에 head tag를 주입해보자고 생각했다.
+
+```tsx
+// gatsby-ssr.tsx
+export function onRenderBody({ pathname, setHeadComponents, ...others }: RenderBodyArgs) {
+  // NOTE: 'loadPageDataSync' only exists when NODE_ENV === "production"
+  if (others.loadPageDataSync) {
+    const {
+      result: { pageContext },
+    } = others.loadPageDataSync(pathname);
+
+    const ctx = pageContext as Record<string, PageContext & Frontmatter>
+  
+    // if mdx posts, set <head>
+    if (ctx.frontmatter) {
+      const {
+        frontmatter: {
+          title,
+          description,
+          date,
+          author,
+          slug,
+        }
+      } = ctx
+  
+      const _title = title ? `${title} | ${defaultMetaData.TITLE}` : defaultMetaData.TITLE
+      const _description = description ?? defaultMetaData.DESCRIPTION
+      const _author = author ?? defaultMetaData.AUTHOR
+      const _image = defaultMetaData.IMAGE
+      const _slug = slug ?? ''
+      const _url = defaultMetaData.SITEURL + _slug
+      
+      const headComponents = [
+        <html lang="ko" />,
+        <title>{ _title }</title>,
+        <meta name='description' content={_description} />,
+        <meta name='author' content={_author} />,
+        <meta name='date' content={date} />,
+        <meta property='og:title' content={_title} />,
+        <meta property='og:description' content={_description} />,
+        <meta property='og:site_name' content='vive works' />,
+        <meta property='og:image' content={_image} />,
+        <meta property='og:type' content='website' />,
+        <meta property='og:url' content={_url}/>,
+      ]
+  
+      setHeadComponents(headComponents)
+    }
+  }
+}
+```
+
+결론만 말하자면 이 방식을 사용해도 원하는 head tag가 안 들어가거나 아예 없는 오류가 발생한다. 그리고 이 작업을 하면서 Gatsby에 자잘한 오류(실수)들이 있고 공식 문서 또한 부실한 면이 있다는 게 좀 느껴졌다.
+
+```ts
+// gatsby/index.d.ts
+export interface RenderBodyArgs {
+  loadPageDataSync: (pathname: string) => { result: Record<string, unknown> }
+  pathname: string
+  setHeadComponents: (comp: React.ReactNode[]) => void
+  setHtmlAttributes: (attr: ReactProps<HTMLHtmlElement>) => void
+  setBodyAttributes: (attr: ReactProps<HTMLBodyElement>) => void
+  setPreBodyComponents: (comp: React.ReactNode[]) => void
+  setPostBodyComponents: (comp: React.ReactNode[]) => void
+  setBodyProps: Function
+}
+```
+
+우선, `loadPageDataSync`라는 함수는 인터페이스 내에 정의되어 있지만 공식 문서에는 없다. 그리고 이 함수는 production 환경에서만 존재하고 다른 환경에서는 에러가 발생한다. 물론 production에서는 아주 잘 작동한다. Gatsby 측 개발자의 관련 [답변](https://github.com/gatsbyjs/gatsby/discussions/35841#discussioncomment-3357209)을 보면 이 부분은 실수인 것 같다. 그리고 경험해본 바에 의하면, `headComponents` 리스트에 `<head>`에 들어갈 수 없는 태그가 하나라도 포함되어 있으면 전체 내용이 `<body>` 내부로 들어간다. 그리고 리스트들을 하나로 담고 있는 컴포넌트A를 만들어 A 하나만 리스트에 넣어놓아도 안 된다. 그 이유가 `<React.Fragment>`, `<>`도 내부적으로 하나의 태그로 인식하기 때문이다.
+
+이런저런 시도를 해보다가 결국 `pages/`에서도 `Head`를 사용하지 않고 `react-helmet`을 사용하기로 했다. 사실 처음부터 이렇게 하는 게 코드 측면에서나 정신건강 측면에서나 훨씬 깔끔하게 해결이 가능했다. 하지만 더 좋은 방법이 있지 않을까.. 분명 있을텐데.. 하는 마음으로 꼬박 이틀동안 issue/discussion 정주행을 하고 여러가지를 시도를 해보면서 알게 된 것도 배운 것도 많기에 꽤 재미있었다.
+
+---
 
 ## MDX
 처음엔 `.md`로 세팅을 했다가 `.mdx`로 수정해주었다. tag들을 내가 직접 커스텀할 수 있다는 점이 마음에 들었다. 당장 세어보니 14개나 되는 tag를 커스터마이징 해놓았다. `@mdx-js/react` v1에서는 code, inlineCode를 구분해서 커스텀이 가능했는데, v2에서는 inlineCode가 없어졌다. 그래서 결국 코드 블럭으로 주로 사용하던 `<pre>` tag를 codeBlock으로 커스텀하여 사용하고 있다. `<code>` tag만 커스텀하여 사용하게 되면 결국 inlineCode와 codeBlock이 동시에 동일한 스타일로 적용되는데, 누가 이렇게 쓰려고 할지.... 어차피 대부분 따로 커스텀해서 사용할텐데 왜 없앴는지 의문이 든다.
@@ -80,7 +141,7 @@ createPage<PageContext>({
 })
 ```
 
-`.md`에서 `.mdx`로 바꾸느라 `?_contentFilePath=${node.internal.contentFilePath}` 부분을 추가해주면서 에러가 발생했다.
+`.md`에서 `.mdx`로 바꾸느라 `?_contentFilePath=${...}` 부분을 추가해주면서 에러가 발생했다.
 
 > Invalid AST. Parsed source code did not 'return' valid output.
 
