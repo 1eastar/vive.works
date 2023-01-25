@@ -40,7 +40,7 @@ Gatsby를 한번도 사용해본 적이 없기에 공식 문서부터 쭉 훑기
 하지만 나중에 template에도 `Head`를 사용할 수 있다는 걸 알게 되면서 바로 `react-helmet` 패키지를 삭제해버렸다.
 
 ### flickering error
-이 문제를 해결하려고 많은 시간을 투자했는데, 결국 template에도 `Head`를 사용하면서 문제가 해결되었다. 공식 문서 상의 `Head` 관련 예시들은 전부 `pages/` 파일들이고, MDX template에 대한 내용에서도 `Head`를 사용할 수 있다는 내용은 없다. 그리고 Gatsby 문서에도 page에만 사용 가능하다고 설명되어있다. 그래서 삽질을 굉장히 많이 했는데, discussion에 관련 질문을 남기니 template에도 사용 가능하다고 Gatsby 개발진에서 답변이 왔고 `pages/`에서만 사용 가능한 줄 알았다고 하니 이후 공식 문서가 수정되었다.([commit](https://github.com/gatsbyjs/gatsby/commit/e2b84887841f80a47fa705bfe1bbf5b4673677e1))
+이 문제를 해결하려고 많은 시간을 투자했는데, 결국 template에도 `Head`를 사용하면서 문제가 해결되었다. 공식 문서 상의 `Head` 관련 예시들은 전부 `pages/` 파일들이고, MDX template에 대한 내용에서도 `Head`를 사용할 수 있다는 내용은 없다. 그리고 Gatsby 문서에도 page에만 사용 가능하다고 설명되어있다. 그래서 삽질을 굉장히 많이 했는데, discussion에 관련 질문을 남기니 template에도 사용 가능하다고 Gatsby 개발진에서 답변이 왔고 `pages/`에서만 사용 가능한 줄 알았다고 하니 이후 공식 문서가 수정되었다.([discussion](https://github.com/gatsbyjs/gatsby/discussions/35841#discussioncomment-4775527), [commit](https://github.com/gatsbyjs/gatsby/commit/e2b84887841f80a47fa705bfe1bbf5b4673677e1))
 
 아래는 template에서 `Head`를 사용할 수 없다고 알고 있을 때 작성한 내용이다.
 

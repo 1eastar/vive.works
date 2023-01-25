@@ -37,7 +37,7 @@ function Seo({
 	return (
 		<>
 			<html lang={lang} />
-			{ title && <title>{ title }</title> }
+			<title>{ _title }</title>
 			<meta name='description' content={_description} />
 			<meta name='author' content={_author} />
 			<meta name='date' content={date} />
