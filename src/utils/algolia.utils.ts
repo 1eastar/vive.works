@@ -1,10 +1,7 @@
 const indexName = 'Posts'
 
 const pageQuery = `{
-  posts: allMdx(
-    sort: { frontmatter: { date: DESC } },
-    limit: 1000
-  ) {
+  posts: allMdx {
     nodes {
       objectID: id
       frontmatter {
