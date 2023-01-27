@@ -26,7 +26,7 @@ const tagComponents: MDXComponents = {
   ul: Tags.UnorderedList,
   pre: Tags.CodeBlock,
   img: Tags.Image,
-  // ...Tags,
+  ...Tags,
 }
 
 interface PostTemplateProps extends PostTemplateQueryResult {
