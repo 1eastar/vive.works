@@ -6,7 +6,7 @@ description: "제너레이터와 Redux-saga, 미들웨어에 대해 알아봅시
 author: "Vive Kang"
 date: "2020-12-05"
 image: ""
-tags: ["Redux"]
+tags: ["Redux", "JS", "Generator"]
 
 ---
 
@@ -37,7 +37,7 @@ function* generatorFunc() {
 const gen = generatorFunc() // generator 객체 반환
 
 gen.next()
-// start
+// start!
 // { value: 10, done: false }
 
 gen.next(1)
@@ -78,7 +78,7 @@ function* watchSaga() {
 ```
 
 # Redux 미들웨어
-Redux에서 미들웨어는 기본적으로 다음과 같은 구조를 가진다
+Redux에서 미들웨어는 기본적으로 다음과 같은 틀을 가진다
 
 ```js
 const sampleMiddleware = store => next => action => {
@@ -87,7 +87,6 @@ const sampleMiddleware = store => next => action => {
 }
 ```
 
-## 미들웨어 구조
 `store`는 Redux 스토어, `next`는 다음 미들웨어(혹은 리듀서)에게 액션을 전달하는 함수, `action`은 현재 이 미들웨어로 들어온 액션 데이터이다. 그리고 Redux는 여러 개의 미들웨어를 가질 수 있다. Redux의 대표적인 미들웨어인 Redux-saga를 예시로 보자면 다음과 같다.
 
 ```js
@@ -105,7 +104,7 @@ const store = createStore(
 sagaMiddleware.run(rootSaga)
 ```
 
-미들웨어는 액션이 dispatch 되고 액션이 리듀서로 도달하기 전에 그 중간에 위치한다. 여러 개의 미들웨어가 있다면 `applyMiddleware` 함수에 넘겨준 미들웨어 순서대로 액션이 거쳐간다.(물론 아래의 middleware2에서 `next(action)`을 호출해주지 않고 있다면 middleware3 이후부터는 아무런 동작을 하지 않지만 이런 경우가 거의 없으니 무시한다.)
+미들웨어는 액션이 dispatch 되고 액션이 리듀서로 도달하기 전에 그 중간에 위치한다. 여러 개의 미들웨어가 있다면 `applyMiddleware` 함수에 넘겨준 미들웨어 순서대로 액션이 거쳐간다.(물론 아래의 middleware2에서 `next(action)`을 호출해주지 않고 있다면 middleware3 이후부터는 아무런 동작을 하지 않지만 이런 경우는 거의 없다.)
 * dispatch -> middleware1 -> middleware2 -> middleware3 ->  ... -> reducer
 
 ## Redux saga
@@ -143,11 +142,11 @@ export function* watchActionSaga() {
 액션 `ACTION`이 dispatch 됐을 때의 흐름은 이렇다.
 
 1. `ACTION` dispatch
-2. saga 미들웨어에서 `ACTION`을 다음 미들웨어(또는 리듀서)로 보낸다.(이후 미들웨어(또는 리듀서)에서 작업을 이어나간다. ex. loading값을 true로 설정)
+2. saga 미들웨어에서 `ACTION`을 다음 미들웨어(또는 리듀서)로 보낸다.(이후 미들웨어(또는 리듀서)에서는 `ACTION`에 대한 작업을 이어나간다.)
 3. `ACTION`이 saga 내부로 전달된다.
-4. `watchActionSaga`에서 `ACTION` 액션을 모니터링하다가 트리거 되는 순간 `someActionSaga` 함수를 실행한다.
+4. `watchActionSaga`에서 `ACTION` 액션을 모니터링하고 있다가 트리거 되는 순간 `someActionSaga` 함수를 실행한다.
 5. 비동기 Call 값과 함께 `ACTION_SUCCESS` 액션을 dispatch 하거나, 비동기 Call에서 에러 발생 시 `ACTION_ERROR`를 dispatch 한다.
-6. `ACTION_SUCCESS` 또는 `ACTION_ERROR` 액션은 다시 미들웨어들을 거쳐 리듀서로 도달한다.
+6. `ACTION_SUCCESS` 또는 `ACTION_ERROR` 액션은 다시 처음부터 미들웨어들을 거쳐 리듀서로 도달한다.
 
 ---
 
