@@ -11,6 +11,13 @@ module.exports = function(api) {
       },
       'es2021',
     ],
+    [
+      '@babel/preset-typescript',
+      {
+        isTSX: true, // defaults to false
+        allExtensions: true, // defaults to false
+      },
+    ],
   ]
 
   const plugins = []

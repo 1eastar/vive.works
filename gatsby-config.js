@@ -72,13 +72,6 @@ module.exports = {
     },
 		'babel-preset-gatsby',
 		{
-      resolve: 'gatsby-plugin-typescript',
-      options: {
-        isTSX: true, // defaults to false
-        allExtensions: true, // defaults to false
-      },
-    },
-		{
       resolve: 'gatsby-plugin-algolia',
       options: {
         appId: process.env.GATSBY_ALGOLIA_APP_ID,

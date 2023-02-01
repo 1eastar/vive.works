@@ -6137,7 +6137,7 @@ gatsby-plugin-sitemap@^6.3.1:
     minimatch "^3.1.2"
     sitemap "^7.1.1"
 
-gatsby-plugin-typescript@^5.2.0, gatsby-plugin-typescript@^5.4.0:
+gatsby-plugin-typescript@^5.4.0:
   version "5.4.0"
   resolved "https://registry.yarnpkg.com/gatsby-plugin-typescript/-/gatsby-plugin-typescript-5.4.0.tgz#ef008c899670403fc0ad0acc9a770cc4221904ab"
   integrity sha512-BQqt7Sj9JRBOOq7sClwNNdAdtRkBi9Z/TkmdnWNQMeR4YcGI0GvEhSwOuQm4V9FeCFDnbWxmnZ7w9R7Bjl8NVA==
