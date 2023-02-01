@@ -1,10 +1,10 @@
 ---
-id: "20221212"
-slug: "/20221212"
+id: "20230116"
+slug: "/20230116"
 title: "Again 개인 블로그 (feat.Gatsby)"
 description: "블로그를 만든 과정을 기록하고자 합니다"
 author: "Vive Kang"
-date: "2022-12-12"
+date: "2023-01-16"
 image: ""
 tags: ["Gatsby", "Web"]
 
@@ -26,7 +26,7 @@ tags: ["Gatsby", "Web"]
 # Gatsby
 Gatsby를 한번도 사용해본 적이 없기에 공식 문서부터 쭉 훑기 시작했다. 공식 문서가 꽤 친절하다고 느꼈다. 필요할 법한 기능들에 대해서 어떤 패키지를 쓰는 게 좋고, 어떤 플러그인을 쓰는 게 좋고... 등 gatsby 측에서 권장하는 방식에 대해 다 기술해 놓았다. 예를 들어, 검색 기능에는 [algoria search](https://www.gatsbyjs.com/docs/adding-search-with-algolia)를, 페이지 전체적인 layout 적용을 위해서는 [gatsby-plugin-layout](https://www.gatsbyjs.com/docs/adding-search-with-algolia) 이라는 플러그인을 추천한다. 물론 이게 무조건 좋은 점이라 보기는 어렵지만 수많은 플러그인들 속에서 선택지를 좁혀주는 건 정말 마음에 들었다.
 
-그렇다고 마냥 쉬운 프레임워크라고 느껴지지 않았는데, gatsby를 사용하기 위해서는 gatsby 자체가 내부에서 어떻게 돌아가는지 잘 알아야 했다. graphql 사용법도 어느정도 알아야 하고, gatsby 만의 page query 방식, `gatsby-*` 파일들에 대한 내용 등 추가적으로 공부해야 할 게 꽤 있다는 느낌을 받았다. 그리고 플러그인도 몇몇을 제외하면 결국엔 gatsby 측에서 만든 게 아닌 개인 개발자들이 만든 거라 무작정 사용하기는 힘들었다. 그래서 내부 코드를 살펴보고 직접 구현할만한 것들은 직접 작성하는 식으로 하느라 좀 더디게 진행되었다.
+그렇다고 마냥 쉽다고만 느껴지지는 않았는데, gatsby를 사용하기 위해서는 gatsby 자체가 내부에서 어떻게 돌아가는지 잘 알아야 했다. graphql 사용법도 어느정도 알아야 하고, gatsby 만의 page query 방식, `gatsby-*` 파일들에 대한 내용 등 추가적으로 알아야 할 게 꽤 있다는 느낌을 받았다. 그리고 플러그인도 몇몇을 제외하면 결국엔 gatsby 측에서 만든 게 아닌 개인 개발자들이 만든 거라 무작정 사용하기는 힘들었다. 그래서 내부 코드를 살펴보고 직접 구현할만한 것들은 직접 작성하는 식으로 하느라 좀 더디게 진행되었다.
 
 ## SEO
 이번 블로그는 SEO에 신경을 최대한 쓰려고 했다. 신경 쓴다고는 했지만 사실 애초에 정적 사이트로 빌드를 했기 때문에 어려울 게 없었다. 페이지마다 meta data를 설정해주고, sitemap, robots 설정을 해주었다. 그리고 네이버 서치어드바이저와 구글 서치 콘솔에 사이트 등록도 마쳤다.
@@ -38,10 +38,10 @@ Gatsby를 한번도 사용해본 적이 없기에 공식 문서부터 쭉 훑기
 
 하지만 처음에는 `react-helmet`을 사용했다. `.mdx` template을 사용 중이었고, template 컴포넌트는 page가 아니기 때문에 `Head` api를 사용할 수 없다고 생각했다. 그래서 글 마다 다른 head tag를 적용하기 위해 `react-helmet`을 사용했다.
 
-하지만 나중에 template에도 `Head`를 사용할 수 있다는 걸 알게 되면서 바로 `react-helmet` 패키지를 삭제해버렸다.
+하지만 나중에 template에도 `Head`를 사용할 수 있다는 걸 알게 되면서 바로 `react-helmet` 패키지를 삭제했다.
 
-### flickering error
-이 문제를 해결하려고 많은 시간을 투자했는데, 결국 template에도 `Head`를 사용하면서 문제가 해결되었다. 공식 문서 상의 `Head` 관련 예시들은 전부 `pages/` 파일들이고, MDX template에 대한 내용에서도 `Head`를 사용할 수 있다는 내용은 없다. 그리고 Gatsby 문서에도 page에만 사용 가능하다고 설명되어있다. 그래서 삽질을 굉장히 많이 했는데, discussion에 관련 질문을 남기니 template에도 사용 가능하다고 Gatsby 개발진에서 답변이 왔고 `pages/`에서만 사용 가능한 줄 알았다고 하니 이후 공식 문서가 수정되었다.([discussion](https://github.com/gatsbyjs/gatsby/discussions/35841#discussioncomment-4775527), [commit](https://github.com/gatsbyjs/gatsby/commit/e2b84887841f80a47fa705bfe1bbf5b4673677e1))
+### 404 flickering error
+이 문제를 해결하려고 많은 시간을 투자했는데, 결국 template에도 `Head`를 사용할 수 있다는 걸 알게 되면서 문제가 해결되었다. 공식 문서 상의 `Head` 관련 예시들은 전부 `pages/` 파일들이고, MDX template에 대한 내용에서도 `Head`를 사용할 수 있다는 내용은 없다. 그리고 Gatsby 문서에도 "page에서만" 사용 가능하다고 설명되어 있었다. 그래서 삽질을 굉장히 많이 했는데, discussion에 관련 질문을 남기니 template에도 사용 가능하다고 Gatsby 개발진에서 답변이 왔고 `pages/`에서만 사용 가능한 줄 알았다고 답변을 남기니 이후 공식 문서가 수정되었다.([Discussion](https://github.com/gatsbyjs/gatsby/discussions/35841#discussioncomment-4775527), [Commit](https://github.com/gatsbyjs/gatsby/commit/e2b84887841f80a47fa705bfe1bbf5b4673677e1))
 
 아래는 template에서 `Head`를 사용할 수 없다고 알고 있을 때 작성한 내용이다.
 
@@ -51,9 +51,9 @@ Gatsby를 한번도 사용해본 적이 없기에 공식 문서부터 쭉 훑기
 
 ![404 flickering error](../statics/images/flickering_error.gif)
 
-이게 보기보다 큰 문제인게, 크롤러에서 홈 화면을 404 페이지로 인식해버린다. 즉, `<header>`에 들어있는 title, description, og 등 메타 데이터들이 404 페이지의 데이터로 잡힌다는 뜻이다. 비슷한 이슈가 있을까하고 찾아봤지만 없었다. 몇 년 전부터 [이슈](https://github.com/gatsbyjs/gatsby/issues/5329)로 등록된 내용이 있긴 한데 추천을 가장 많이 받은 답변도 근본적인 해결책이 아니었다.
+이게 보기보다 큰 문제인게, 크롤러에서 홈 화면을 404 페이지로 인식해버린다. 즉, `<head>`에 들어있는 title, description, og 등 메타 데이터들이 404 페이지의 값로 잡힌다는 뜻이다. 비슷한 이슈가 있을까하고 찾아봤지만 없었다. 몇 년 전부터 [이슈](https://github.com/gatsbyjs/gatsby/issues/5329)로 등록된 내용이 있긴 한데 추천을 가장 많이 받은 답변도 근본적인 해결책이 아니었다.
 
-왠지 `react-helmet`과 gatsby `Head` 사이에 충돌이 있는 것 같아 패키지를 하나하나 살펴봤다. `react-helmet`은 기본적으로 DOM을 직접 수정한다. 간단히 표현하자면 예를 들어 `document.title = title` 같은 식이다. 그리고 함께 사용하는 `gatsby-plugin-react-helmet`에서 `gatsby-ssr`의 `onRenderBody`함수를 통해 빌드 시 정적 파일에 헤더가 포함되도록 설정해주고 있다. gatsby의 `Head` 도 같은 방식으로 `onRenderBody`에서 `setHeadComponents`를 이용한다.([discussion](https://github.com/gatsbyjs/gatsby/discussions/35841#discussioncomment-3179894)) `Head`가 컴포넌트도 아니고 Gatsby 내에서 로직을 살펴보기가 너무 힘들었기에, 그래서 그냥 `react-helmet` 패키지를 제거하고 `onRenderBody` 함수에서 내가 원하는 기능만 직접 만들어 MDX에 head tag를 주입해보자고 생각했다.
+왠지 `react-helmet`과 gatsby `Head` 사이에 충돌이 있는 것 같아 패키지를 하나하나 살펴봤다. `react-helmet`은 기본적으로 DOM을 직접 수정한다. 간단히 표현하자면 예를 들어 `document.title = title` 같은 식이다. `react-helmet`만 사용한다면 렌더링 된 이후에 값을 수정해주기 때문에 의미가 없다. 그래서 `gatsby-plugin-react-helmet` 패키지를 함께 사용한다. 이 패키지는 `gatsby-ssr`의 `onRenderBody`함수를 통해 빌드 시 정적 파일에 헤더가 포함되도록 해준다. gatsby의 `Head` 도 같은 방식으로 `onRenderBody`에서 `setHeadComponents`를 이용한다.([discussion](https://github.com/gatsbyjs/gatsby/discussions/35841#discussioncomment-3179894)) `Head`가 컴포넌트도 아니라 Gatsby 내에서 로직을 살펴보기가 너무 힘들었기에, 그래서 그냥 `react-helmet` 패키지를 제거하고 `onRenderBody` 함수에서 내가 원하는 기능을 직접 만들어 head tag를 주입해보자고 생각했다.
 
 ```tsx
 // gatsby-ssr.tsx
@@ -66,7 +66,7 @@ export function onRenderBody({ pathname, setHeadComponents, ...others }: RenderB
 
     const ctx = pageContext as Record<string, PageContext & Frontmatter>
   
-    // if mdx posts, set <head>
+    // if mdx page, set <head>
     if (ctx.frontmatter) {
       const {
         frontmatter: {
@@ -121,9 +121,9 @@ export interface RenderBodyArgs {
 }
 ```
 
-우선, `loadPageDataSync`라는 함수는 인터페이스 내에 정의되어 있지만 공식 문서에는 없다. 그리고 이 함수는 production 환경에서만 존재하고 다른 환경에서는 에러가 발생한다. 물론 production에서는 아주 잘 작동한다. Gatsby 측 개발자의 관련 [답변](https://github.com/gatsbyjs/gatsby/discussions/35841#discussioncomment-3357209)을 보면 이 부분은 실수인 것 같다. 그리고 경험해본 바에 의하면, `headComponents` 리스트에 `<head>`에 들어갈 수 없는 태그가 하나라도 포함되어 있으면 전체 내용이 `<body>` 내부로 들어간다. 그리고 리스트들을 하나로 담고 있는 컴포넌트A를 만들어 A 하나만 리스트에 넣어놓아도 안 된다. 그 이유가 `<React.Fragment>`, `<>`도 내부적으로 하나의 태그로 인식하기 때문이다.
+우선, `loadPageDataSync`라는 함수는 gatsby 인터페이스 내에 정의되어 있지만 공식 문서에는 설명이 없다. 그리고 이 함수는 production 환경에서만 존재하고 다른 환경에서는 에러가 발생한다. 물론 production에서는 아주 잘 작동한다. Gatsby 측 개발자의 관련 [답변](https://github.com/gatsbyjs/gatsby/discussions/35841#discussioncomment-3357209)을 보면 이 부분은 실수인 것 같다. 그리고 경험해본 바에 의하면, `headComponents` 리스트에 `<head>`에 들어갈 수 없는 태그가 하나라도 포함되어 있으면 전체 내용이 `<body>` 내부로 들어간다. 그리고 리스트들을 하나로 담고 있는 컴포넌트A를 만들어 A 하나만 리스트에 넣어놓아도 안 된다. 그 이유가 `<React.Fragment>`, `<>`도 내부적으로 하나의 태그로 인식하기 때문이다.
 
-이런저런 시도를 해보다가 결국 `pages/`에서도 `Head`를 사용하지 않고 `react-helmet`을 사용하기로 했다. 사실 처음부터 이렇게 하는 게 코드 측면에서나 정신건강 측면에서나 훨씬 깔끔하게 해결이 가능했다. 하지만 더 좋은 방법이 있지 않을까.. 분명 있을텐데.. 하는 마음으로 꼬박 이틀동안 github issue/discussion 정주행을 하고 여러가지를 시도를 해보면서 알게 된 것도 배운 것도 많기에 꽤 재미있었다.
+이런저런 시도를 해보다가 결국 `pages/`에서도 `Head`를 사용하지 않고 `react-helmet`을 사용하기로 했다. 사실 처음부터 이렇게 하는 게 코드 측면에서나 정신건강 측면에서나 훨씬 깔끔하게 해결이 가능했다. 하지만 더 좋은 방법이 있지 않을까.. 분명 있을텐데.. 하는 마음으로 꼬박 이틀동안 github issue/discussion 정주행을 하고 여러가지를 시도를 해보면서 알게 된 것도 배운 것도 많다고 생각한다.
 
 ---
 
@@ -133,7 +133,8 @@ export interface RenderBodyArgs {
 > 추가로 `.mdx`가 정적 사이트를 만들 때 사용되다보니 next에서도 사용할 수 있지 않을까 싶었는데 [역시 있었다.](https://nextjs.org/docs/advanced-features/using-mdx) 설정 조금만 해주면 gatsby에서 사용하던 방식이랑 거의 유사하게 사용이 가능해보였다. next에서 rust 기반의 MDX 컴파일러를 준비 중이던데 추후 정식 출시가 되면 얼마나 속도 차이가 날지 기대도 된다.
 
 ### 부끄러운 AST 에러
-개발하는 중에 가장 오래 붙잡고 있었던 어처구니 없었던 에러(실수)가 있었는데 다시 반복하지 않도록 짚고 넘어가려 한다.
+개발하는 중에 가장 오래 붙잡고 있었던 어처구니 없었던 에러(실수)가 있었는데 다시 반복하지 않도록 짚고 넘어가려 한다. 결론부터 말하자면 깜빡하고 typescript 트랜트파일을 해주지 않고 있던 게 문제였다.
+
 ```ts
 // gatsby-node.ts
 createPage<PageContext>({
