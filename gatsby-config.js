@@ -63,6 +63,13 @@ module.exports = {
 				],
 			},
 		},
+		{
+			resolve: 'gatsby-plugin-typescript',
+			options: {
+        isTSX: true, // defaults to false
+        allExtensions: true, // defaults to false
+			}
+		},
     {
       resolve: 'gatsby-plugin-sass',
       options: {
