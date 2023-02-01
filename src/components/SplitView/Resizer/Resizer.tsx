@@ -44,7 +44,6 @@ function Resizer({
 
   return (
     <div
-      role="Resizer"
       style={style}
       className={classnames(styles.resizer, className, {
         [styles.dragging]: isDraging,
