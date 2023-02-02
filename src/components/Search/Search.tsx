@@ -2,9 +2,9 @@
 import { InstantSearch } from 'react-instantsearch-dom'
 
 /* Internal */
+import { searchClient } from '@commons/constants/Search.constant'
 import SearchResult from './SearchResult'
 import SearchBox from './SearchBox'
-import { searchClient } from './Search.constant'
 
 interface SearchProps {
   index: {

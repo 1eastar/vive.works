@@ -3,7 +3,7 @@ import useIsDarkMode from '@hooks/useIsDarkMode.hook'
 import { memo, useLayoutEffect, useRef } from 'react'
 
 /* Internal */
-import { utteranceAttributes } from './Utterance.constant'
+import { utteranceAttributes } from '@commons/constants/Utterance.constant'
 import * as styles from './Utterance.scss'
 
 function Utterances() {

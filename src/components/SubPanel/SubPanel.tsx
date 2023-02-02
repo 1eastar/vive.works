@@ -49,8 +49,8 @@ function SubPanel({ location }: SubPanelProps) {
       </div>
       <div className={styles.TOCItemTitle}>
         { pathname === '/'
-          ? SUB_PANEL_TITLE['Main']
-          : SUB_PANEL_TITLE['Post']
+          ? SUB_PANEL_TITLE.Main
+          : SUB_PANEL_TITLE.Post
         }
       </div>
       { pathname === '/'

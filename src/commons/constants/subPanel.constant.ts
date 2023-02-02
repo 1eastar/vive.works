@@ -1,4 +1,4 @@
 export const SUB_PANEL_TITLE = {
-  'Main': 'Tags',
-  'Post': 'TOC',
-}
+  Main: 'Tags',
+  Post: 'TOC',
+} as const

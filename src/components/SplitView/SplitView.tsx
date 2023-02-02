@@ -16,7 +16,7 @@ import {
   MIN_SUB_VIEW_SIZE,
   RESIZER_WIDTH,
   MOBILE_SCREEN_MAX_WIDTH,
-} from './SplitView.constant'
+} from '@commons/constants/SplitView.constant'
 import * as styles from './SplitView.scss'
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function

@@ -3,7 +3,7 @@
 /* Internal */
 import Search from '@components/Search'
 import Seo from '@components/Seo'
-import { searchIndex } from '@components/Search/Search.constant'
+import { searchIndex } from '@commons/constants/Search.constant'
 
 const IndexPage = () => {
   return (
