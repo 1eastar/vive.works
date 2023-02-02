@@ -1,8 +1,9 @@
 .unordered-list {
   color: var(--text-color-primary);
   margin: 10px 15px;
+  list-style-position: outside;
   list-style-type: disc;
-  list-style-position: inside;
+  padding-inline-start: 15px;
 
   li {
     line-height: 2;

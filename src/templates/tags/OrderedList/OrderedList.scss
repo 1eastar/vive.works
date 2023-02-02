@@ -1,8 +1,9 @@
 .ordered-list {
   list-style: decimal;
-  list-style-position: inside;
+  list-style-position: outside;
   color: var(--text-color-primary);
   margin: 10px 15px;
+  padding-inline-start: 15px;
 
   li {
     line-height: 2;
