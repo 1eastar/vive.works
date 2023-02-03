@@ -1,10 +1,10 @@
 /* External */
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { connectSearchBox } from 'react-instantsearch-dom'
 import classNames from 'classnames'
 
 /* Internal */
-import { getQueryParamValue, isBrowser } from '@utils/browser.utils'
+import { getValueFromQueryString, isBrowser } from '@utils/browser.utils'
 import CloseIcon from '-!svg-react-loader!@statics/icons/close.svg'
 import * as styles from './SearchBox.scss'
 
@@ -26,7 +26,7 @@ function SearchBox({
   }, [refine])
 
   useEffect(() => {
-    const tag = getQueryParamValue(queryParams, 'tag')
+    const tag = getValueFromQueryString(queryParams, 'tag')
     
     if (tag) refine(tag) 
     else clearQuery()
@@ -40,6 +40,15 @@ function SearchBox({
   const handleFocus = useCallback((isFocus: boolean) => () => {
     setFocused(isFocus)
   }, [])
+
+  const renderCloseIcon = useMemo(() => (
+    <div
+      className={styles.clear}
+      onClick={clearQuery}
+    >
+      <CloseIcon />
+    </div>
+  ), [clearQuery])
 
   return (
     <div className={classNames(styles.wrapper, {
@@ -56,12 +65,7 @@ function SearchBox({
         onFocus={handleFocus(true)}
         onBlur={handleFocus(false)}
       />
-      <div
-        className={styles.clear}
-        onClick={clearQuery}
-      >
-        <CloseIcon />
-      </div>
+      { renderCloseIcon }
     </div>
   )
 }

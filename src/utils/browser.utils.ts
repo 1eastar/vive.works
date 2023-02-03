@@ -1,13 +1,16 @@
 export const isBrowser = typeof window !== 'undefined'
 
-export function getQueryParamValue(query?: string, key?: string): string | undefined {
+/**
+ * 
+ * @param query query string
+ * @param key The `key` of the value you want to get from `query`
+ * @returns value of the `key` or `undefined`
+ */
+export function getValueFromQueryString(query: string, key: string): string | undefined {
   if (query) {
-    const queryParams = query
-    if (queryParams) {
-      const paramObj = new URLSearchParams(queryParams)
+    const paramObj = new URLSearchParams(query)
 
-      return decodeURIComponent(paramObj.get(key))
-    }
+    return decodeURIComponent(paramObj.get(key))
   }
 
   return undefined

@@ -1,22 +1,30 @@
 /* Internal */
 import { TOCQueryNode, TOCQueryResult } from '@commons/types/QueryType'
 import type { TOCItem } from '@components/SubPanel/TOC/TOCItem'
-import { isBrowser } from './browser.utils'
 
 const slashRegex = /\//g
 
-export function findCurrentMDX({ allMdx }: TOCQueryResult): TOCQueryNode | undefined {
-  const pathname = isBrowser ? window.location.pathname : ''
-  
+/**
+ * 
+ * @param data all MDX data
+ * @param pathname current pathname
+ * @returns MDX for current page
+ */
+export function findCurrentMDX({ allMdx }: TOCQueryResult, pathname: string): TOCQueryNode | undefined {
   return allMdx.nodes.find(Mdx =>
     Mdx.frontmatter.slug.replace(slashRegex, '') === pathname.replace(slashRegex, '')
   )
 }
 
-export function changeMdxToTOCItems(Mdx: TOCQueryNode): TOCItem[] {
+/**
+ * 
+ * @param Mdx MDX
+ * @returns list of TOC items
+ */
+export function getTOCfromMDX(Mdx: TOCQueryNode): TOCItem[] {
   const MDXBodyTitles = Mdx.body.split('\n').filter(t => t.includes('# ') && t[0] === '#')
   
-  return MDXBodyTitles.map(title => {
+  return MDXBodyTitles.map<TOCItem>(title => {
     const level = title.match(/#/g).length - 1
     return {
       title: title.split('# ')[1].trim(),

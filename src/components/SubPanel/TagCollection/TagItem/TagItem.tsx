@@ -5,14 +5,14 @@ import classNames from 'classnames'
 
 /* Internal */
 import { Tag } from '@utils/tag.utils'
-import { getQueryParamValue, isBrowser } from '@utils/browser.utils'
+import { getValueFromQueryString, isBrowser } from '@utils/browser.utils'
 import * as styles from './TagItem.scss'
 
 function TagItem(tag: Tag) {
   const queryParams = isBrowser ? window.location.search : ''
 
   const isCurrentTag = useMemo(() => {
-    const currentTagText = getQueryParamValue(queryParams, 'tag')
+    const currentTagText = getValueFromQueryString(queryParams, 'tag')
 
     if (currentTagText) {
       return tag.text === currentTagText.replace('#', '').trim()
@@ -31,6 +31,7 @@ function TagItem(tag: Tag) {
 
   return (
     <div
+      key={tag.text}
       onClick={onClickItem}
       className={classNames(styles.tagItem, {
         [styles.current]: isCurrentTag,

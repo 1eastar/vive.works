@@ -6,6 +6,12 @@ export interface Tag {
   count: number
 }
 
+/**
+ * get Tag list from all MDX data
+ * 
+ * @param {TagQueryResult} data all MDX data that has frontmatter tags
+ * @return {Tag[]} `Tag[]`
+ */
 export function changeAllMdxToTagCollection({ allMdx }: TagQueryResult): Tag[] {
   const tagMap = new Map<string, number>()
 
