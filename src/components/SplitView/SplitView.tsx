@@ -84,6 +84,7 @@ function SplitView({
 
   const renderStyledChild = useCallback((childNode: JSX.Element, childIndex: number) => (
     React.cloneElement(childNode, {
+      key: childIndex,
       style: { flexBasis: `${sizeRatios[childIndex]}%` }
     })
   ), [sizeRatios])
@@ -104,7 +105,6 @@ function SplitView({
       { children.map(renderStyledChild) }
 
       <Resizer
-        className={styles.resizer}
         onDragStart={_onDragStart}
         onDragEnd={_onDragEnd}
         onDragging={_onDragging}

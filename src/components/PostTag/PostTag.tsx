@@ -1,7 +1,7 @@
 /* External */
 import classNames from 'classnames'
 import { navigate } from 'gatsby'
-import { MouseEvent, useCallback } from 'react'
+import { memo, MouseEvent, useCallback } from 'react'
 
 /* Internal */
 import * as styles from './PostTag.scss'
@@ -39,4 +39,4 @@ function PostTag({
   )
 }
 
-export default PostTag
+export default memo(PostTag)
