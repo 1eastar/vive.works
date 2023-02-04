@@ -4,3 +4,4 @@
 yarn precommit-msg
 yarn typecheck
 yarn lint-staged
+yarn test
