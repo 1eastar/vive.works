@@ -18,9 +18,11 @@ module.exports = {
 		'no-unexpected-multiline': 'off',
 		'react/react-in-jsx-scope': 'off',
 		'no-unused-vars': 'off',
+		'no-undef': 'off',
 		'@typescript-eslint/no-unused-vars': 'error',
 		'@typescript-eslint/no-explicit-any': 'off',
-		'@typescript-eslint/no-non-null-assertion': 'off'
+		'@typescript-eslint/no-non-null-assertion': 'off',
+		'@typescript-eslint/no-empty-function': 'off',
 	},
 	env: {
 		browser: true,
