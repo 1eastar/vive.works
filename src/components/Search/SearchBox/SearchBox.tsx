@@ -5,7 +5,7 @@ import classNames from 'classnames'
 
 /* Internal */
 import { getValueFromQueryString, isBrowser } from '@utils/browser.utils'
-import CloseIcon from '-!svg-react-loader!@statics/icons/close.svg'
+import ClearIcon from '-!svg-react-loader!@statics/icons/close.svg'
 import * as styles from './SearchBox.scss'
 
 interface SearchBoxProps {
@@ -41,12 +41,13 @@ function SearchBox({
     setFocused(isFocus)
   }, [])
 
-  const renderCloseIcon = useMemo(() => (
+  const renderClearIcon = useMemo(() => (
     <div
       className={styles.clear}
       onClick={clearQuery}
+      data-testid="clear"
     >
-      <CloseIcon />
+      <ClearIcon />
     </div>
   ), [clearQuery])
 
@@ -65,7 +66,7 @@ function SearchBox({
         onFocus={handleFocus(true)}
         onBlur={handleFocus(false)}
       />
-      { renderCloseIcon }
+      { renderClearIcon }
     </div>
   )
 }
