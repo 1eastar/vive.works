@@ -4,7 +4,7 @@ import React from 'react'
 /* Internal */
 import { defaultMetaData } from '@commons/constants/Seo.constant'
 
-interface SeoProps {
+export interface SeoProps {
 	lang?: string
 	title?: string
 	description?: string
