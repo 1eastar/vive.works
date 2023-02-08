@@ -30,6 +30,7 @@ function TOCItemComponent({
         [styles.current]: isCurrentHeading,
       })}
       href={`#${item.title}`}
+      data-testid={`TOCItem-${item.title}`}
     >
       {/* NOTE: &nbsp; == "\u00a0" */}
       { '\u00a0\u00a0'.repeat(item.level) } { item.title }

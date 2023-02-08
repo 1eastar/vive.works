@@ -3,12 +3,12 @@ import { useCallback, useMemo, useState } from 'react'
 import { useStaticQuery, graphql } from 'gatsby'
 
 /* Internal */
+import { isBrowser } from '@utils/browser.utils'
 import { getTOCfromMDX, findCurrentMDX } from '@utils/TOC.utils'
 import { TOCQueryResult } from '@commons/types/QueryType'
 import useIntersectionObserver from '@hooks/useIntersectionObserver.hook'
 import TOCItem from './TOCItem'
 import * as styles from './TOC.scss'
-import { isBrowser } from '@utils/browser.utils'
 
 function TOC() {
   const pathname = isBrowser ? window.location.pathname : ''
@@ -40,7 +40,10 @@ function TOC() {
   }, [queryData, pathname])
 
   return (
-    <div className={styles.TOCItemWrapper}>
+    <div
+      className={styles.TOCItemWrapper}
+      data-testid='TOC-container'
+    >
       { TOCItemList.map(item => (
         <TOCItem
           key={item.title}

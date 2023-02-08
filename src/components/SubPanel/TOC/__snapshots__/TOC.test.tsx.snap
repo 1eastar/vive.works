@@ -1,0 +1,51 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`<TOC/> [snapshot] title(h1, h2, h3)이 있을 때 TOC 리스트를 제대로 렌더링한다. 1`] = `
+<div
+  data-testid="TOC-container"
+>
+  <a
+    class=""
+    data-testid="TOCItem-first title"
+    href="#first title"
+  >
+     
+    first title
+  </a>
+  <a
+    class=""
+    data-testid="TOCItem-second title"
+    href="#second title"
+  >
+      
+     
+    second title
+  </a>
+  <a
+    class=""
+    data-testid="TOCItem-third title"
+    href="#third title"
+  >
+        
+     
+    third title
+  </a>
+  <a
+    class=""
+    data-testid="TOCItem-fourth title"
+    href="#fourth title"
+  >
+      
+     
+    fourth title
+  </a>
+  <a
+    class=""
+    data-testid="TOCItem-fifth title"
+    href="#fifth title"
+  >
+     
+    fifth title
+  </a>
+</div>
+`;

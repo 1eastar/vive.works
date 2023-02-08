@@ -36,6 +36,7 @@ function TagItem(tag: Tag) {
       className={classNames(styles.tagItem, {
         [styles.current]: isCurrentTag,
       })}
+      data-testid={`tag-${tag.text}`}
     >
       #&nbsp;{ tag.text } &nbsp; ({ tag.count })
     </div>
