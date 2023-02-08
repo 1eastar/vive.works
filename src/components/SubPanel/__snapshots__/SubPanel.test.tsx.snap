@@ -1,0 +1,171 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`<SubPanel/> 게시글 페이지 [snapshot] 게시글 페이지에서는 헤더, 아이콘들과 함께 TOC를 렌더링한다. 1`] = `
+<div
+  data-testid="SubPanel-container"
+>
+  <div>
+    <div>
+      Vive works
+    </div>
+    <div>
+      <test-file-stub />
+    </div>
+    <div>
+      <test-file-stub />
+    </div>
+  </div>
+  <div>
+    Tags
+  </div>
+  <div
+    data-testid="tagCollection"
+  >
+    <div
+      class=""
+      data-testid="tag-All"
+    >
+      # 
+      All
+         (
+      5
+      )
+    </div>
+    <div
+      class=""
+      data-testid="tag-tag1"
+    >
+      # 
+      tag1
+         (
+      1
+      )
+    </div>
+    <div
+      class=""
+      data-testid="tag-tag2"
+    >
+      # 
+      tag2
+         (
+      3
+      )
+    </div>
+    <div
+      class=""
+      data-testid="tag-tag3"
+    >
+      # 
+      tag3
+         (
+      2
+      )
+    </div>
+    <div
+      class=""
+      data-testid="tag-tag4"
+    >
+      # 
+      tag4
+         (
+      1
+      )
+    </div>
+    <div
+      class=""
+      data-testid="tag-tag5"
+    >
+      # 
+      tag5
+         (
+      1
+      )
+    </div>
+  </div>
+</div>
+`;
+
+exports[`<SubPanel/> 메인 페이지 [snapshot] 헤더, 아이콘들과 함께 Tag collection을 렌더링한다. 1`] = `
+<div
+  data-testid="SubPanel-container"
+>
+  <div>
+    <div>
+      Vive works
+    </div>
+    <div>
+      <test-file-stub />
+    </div>
+    <div>
+      <test-file-stub />
+    </div>
+  </div>
+  <div>
+    Tags
+  </div>
+  <div
+    data-testid="tagCollection"
+  >
+    <div
+      class=""
+      data-testid="tag-All"
+    >
+      # 
+      All
+         (
+      5
+      )
+    </div>
+    <div
+      class=""
+      data-testid="tag-tag1"
+    >
+      # 
+      tag1
+         (
+      1
+      )
+    </div>
+    <div
+      class=""
+      data-testid="tag-tag2"
+    >
+      # 
+      tag2
+         (
+      3
+      )
+    </div>
+    <div
+      class=""
+      data-testid="tag-tag3"
+    >
+      # 
+      tag3
+         (
+      2
+      )
+    </div>
+    <div
+      class=""
+      data-testid="tag-tag4"
+    >
+      # 
+      tag4
+         (
+      1
+      )
+    </div>
+    <div
+      class=""
+      data-testid="tag-tag5"
+    >
+      # 
+      tag5
+         (
+      1
+      )
+    </div>
+  </div>
+</div>
+`;

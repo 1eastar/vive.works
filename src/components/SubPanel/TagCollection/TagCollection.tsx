@@ -26,7 +26,10 @@ function TagCollection() {
   const tags = useMemo(() => changeAllMdxToTagCollection(data), [data])
 
   return (
-    <div className={styles.itemsWrapper}>
+    <div
+      className={styles.itemsWrapper}
+      data-testid="tagCollection"
+    >
       { tags.map(TagItem) }
     </div>
   )

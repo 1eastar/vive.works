@@ -1,0 +1,68 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`<TagCollection/> [snapshot] 정확한 Tag 데이터 리스트를 렌더링한다. 1`] = `
+<div
+  data-testid="tagCollection"
+>
+  <div
+    class=""
+    data-testid="tag-All"
+  >
+    # 
+    All
+       (
+    5
+    )
+  </div>
+  <div
+    class=""
+    data-testid="tag-tag1"
+  >
+    # 
+    tag1
+       (
+    1
+    )
+  </div>
+  <div
+    class=""
+    data-testid="tag-tag2"
+  >
+    # 
+    tag2
+       (
+    3
+    )
+  </div>
+  <div
+    class=""
+    data-testid="tag-tag3"
+  >
+    # 
+    tag3
+       (
+    2
+    )
+  </div>
+  <div
+    class=""
+    data-testid="tag-tag4"
+  >
+    # 
+    tag4
+       (
+    1
+    )
+  </div>
+  <div
+    class=""
+    data-testid="tag-tag5"
+  >
+    # 
+    tag5
+       (
+    1
+    )
+  </div>
+</div>
+`;

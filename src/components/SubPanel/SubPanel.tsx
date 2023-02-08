@@ -32,7 +32,10 @@ function SubPanel({ location }: SubPanelProps) {
   }, [])
 
   return (
-    <div className={styles.TOCContainer}>
+    <div
+      className={styles.TOCContainer}
+      data-testid='SubPanel-container'
+    >
       <div className={styles.header}>
         <div
           className={styles.title}
