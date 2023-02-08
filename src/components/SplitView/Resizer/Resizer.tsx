@@ -49,6 +49,7 @@ function Resizer({
         [styles.dragging]: isDraging,
       })}
       onMouseDown={onMouseDown}
+      data-testid="resizer"
     />
   )
 }

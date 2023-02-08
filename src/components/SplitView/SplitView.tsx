@@ -19,7 +19,6 @@ import {
 } from '@commons/constants/SplitView.constant'
 import * as styles from './SplitView.scss'
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {}
 
 interface SplitViewProps {
