@@ -93,7 +93,7 @@ export const pageQuery = graphql`
         title
         description
         author
-        date(formatString: "YYYY-M-DD")
+        date(formatString: "YYYY-MM-DD")
         image
         tags
       }
