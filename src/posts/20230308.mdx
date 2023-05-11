@@ -1,0 +1,106 @@
+---
+id: "20230308"
+slug: "/20230308"
+title: "Transformers: Attention Is All You Need"
+description: "여러 LM의 기반이 되는 transformer paper review"
+author: "Vive Kang"
+date: "2023-03-08"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+
+
+## Motivation & Introduction
+RNN은 AutoRegressive한 특성을 갖고 이러한 특성때문에 training data의 parallelization 연산을 할 수 없다. 따라서 속도가 느렸고, 특히 long sequence일수록 성능이 좋지 않았다. 최근 연구에서 factorization tricks([Factorization tricks for LSTM networks](https://arxiv.org/pdf/1703.10722.pdf))를 통해 계산 효율성을 향상시키기도 했고, conditional computation([Outrageously large neural networks: The sparsely-gated mixture-of-experts layer](https://arxiv.org/pdf/1701.06538.pdf))을 통해 계산 효율성 + 모델 성능을 향상시켰지만, 여전히 sequential한 방식으로 계산이 진행된다는 한계가 있었다.
+
+어텐션 메커니즘이 나온 이후로 대부분 Attention + RNN을 함께 이용했지만, 이 논문에서는 RNN을 없애고 어텐션 메커니즘만을 이용해 설계한 모델인 transformer를 소개한다.
+
+## Model Architecture
+![figure 1](../blogImage/1-figure1.png)
+대부분의 뛰어난 sequence 변환 모델은 encoder-decoder 구조를 갖고 있기 때문에 transformer 또한 encoder-decoder 구조를 기본으로 한다.
+
+### Encoder
+N=6, 즉 transformer의 encoder에서는 동일한 6개의 layer를 이어붙인 구조를 이용했다. 각 layer는  Multi-Head Attention과 Feed Forward network 2개의 sub-layer로 구성되며, 각 sub-layer 이후에는 residual connection + Layer normalization을 수행한다. 최종적으로 sub-layer와 residual connection, layer normalization을 거친 output을 다음과 같이 표현할 수 있다.
+$$
+LayerNorm(x + SubLayer(x))
+$$
+이 결과 값은 다음 sub-layer의 input 또는 다음 encoder layer의 input으로 들어간다. 논문에서는 residual connection 계산의 편의를 위해 embedding layer를 포함한 모든 sub-layer에서 출력하는 벡터를 512차원($d_{model}=512$)으로 설정해주었다. 즉, 각각의 토큰이 embedding 된 이후부터는 512차원 벡터로 표현된다는 뜻이다. 
+
+### Decoder
+encoder와 동일하게 N=6으로 구성했다. encoder와 큰 차이점은 Multi-Head Attention과 Feed Forward layer 사이에 Multi-Head Attention이 하나 추가되었다는 점이다. 이 layer는 encoder의 output을 input으로 받는 encoder-decoder Attention이고, encoder와 decoder layer의 각 시작부분에 위치한 Multi-Head Attention은 self-Attention이다. 
+
+또 한 가지 encoder와 다른 점은 decoder의 self-Attention layer에서는 마스킹을 이용한다는 점이다. decoder에서는 auto-regressive하게 output 토큰을 하나씩 예측을 해나가는데, 지금 예측하고자 하는 토큰 값 이후에 등장하는 토큰을 이용해 학습을 하게 되면 일종의 cheating이 된다. 학습이 아닌 상황에서는 output sequence 전체 내용을 모르기 때문이다. 따라서 학습할 때, A라는 토큰을 예측하기 위해 A 이후에 등장하는 토큰에 마스킹(−∞) 처리를 한다. −∞은 이후 softmax를 거치면 0에 수렴하기때문에 해당 토큰이 영향을 끼치지 못하게 할 수 있다.
+
+encoder와 decoder 둘 다 pad 마스킹은 하지만 decoder에서 추가 마스킹을 더 하는 것이다.
+![figure 2](../blogImage/1-figure2.png)
+
+### Scaled Dot-Product Attention
+encoder와 decoder에서 마스킹을 제외하고는 동일한 Multi-Head Attention 구조를 가진다. 먼저 Scaled Dot-Product Attention을 보면 Query, Key, Value가 있는데, 이는 한 토큰의 embedding vector에다가 $W_q$, $W_k$, $W_v$ 가중치를 각각 곱해서 나온 행렬 값이다. 먼저 알아야 할 것은 이 과정은 sequence 내의 한 토큰($Q_i$)에 대해 다른 토큰들과의 유사도를 구하는 과정이다. 유사도를 구하는 방법은 다양하지만 여기서는 내적(Dot-Product)을 통해 구하게 되고, 하나의 토큰($Q_i$)씩 개별적으로 이 과정을 진행하는 것이 아니라 Q라는 행렬을 통해 한번에 내적 연산을 진행하게 된다.
+
+전체적인 흐름을 살펴보면, $QK^T$를 통해 각 토큰에 대한 유사도를 각각 구하고, $1/d_k^{1/2}$ 을 곱해준다(Scaling). 이후 이 유사도 값을 softmax를 통해 각 토큰에 대한 확률로 변환한 뒤 V를 곱해서 나온 결과들을 더해준다. 이 과정을 전부 거치면 각 토큰에 대한 1차원 형태의 Attention 결과 값들이 나열된 행렬이 출력된다. 식을 한 줄로 표현하면 다음과 같다.
+
+$$
+Attention(Q, K, V) = softmax(QK^T/d_k^{1/2})V
+$$
+
+$QK^T$ 과정에서 내적이라는 연산의 특성상 벡터들의 차원이 많아질수록 결과 값이 점점 커지게 된다. 이는 convergence되는 시간이 오래 걸리게 하고 모델 성능에도 안 좋은 영향을 끼치기 때문에 적당한 크기의 $1/d_k^{1/2}$ 로 scaling 해준다.
+
+### Multi-Head Attention
+$d_{model}=512$ 차원의 토큰으로 1개의 Attention을 이용하는 대신 Q, K, V 각각 $d_q$, $d_k$, $d_v$ 차원을 가지는 $h$개의 Attention을 사용하는 것이 더 좋은 결과를 낸다는 것을 발견했다고 한다. 논문에서는 $h = 8$과  $d_k = d_v = d_{model}/h = 64$ 를 이용한다. 즉, 각각의 Attention 마다 64차원($d_v$)의 벡터를 output하게 되고 8개의 output을 concat하여 다시 512차원의 벡터를 최종 결과 값으로 이용한다. 결과적으로 input 벡터의 차원과 output 벡터의 차원은 동일하게 512차원이 된다. Attention의 개수가 8개로 늘어났지만 대신 각 Q, K, V의 dimension은 줄어들었기 때문에 총 연산 비용은 거의 비슷하다.
+
+Multi-Head Attention의 전체 식을 작성해보면 다음과 같다.
+
+$$
+head_i = Attention(QW_i^Q, KW_i^K, VW_i^V)
+$$
+
+$$
+MultiHead(Q, K, V) = Concat(head_1, ..., head_h)W^o
+$$
+
+### Attentions in Transformer
+transformer는 3종류의 다른 Attention을 가지고 있다.
+
+1. decoder의 encoder-decoder attention. 이 attention에서 Q(Query)는 이전 layer의 output 값을 이용한다. 즉, self-attention의 출력 값을 이용하는 것. K, V는 encoder의 최종 output을 이용한다. 
+2. encoder의 self-attention
+3. decoder의 self-attention. 앞서 **Decoder** 파트에서 말했듯이 encoder의 self-attention에 마스킹하는 과정이 추가되어 있다. 추가로, 학습 과정에서 decoder에서 예측이 틀렸을 때 틀린 예측 값을 다음 예측의 input 값으로 함께 사용하게 되면 학습에 제대로 일어날 수가 없기 때문에 학습할 때는 예측 결과 틀리더라도 다음 input으로는 제대로된 값을 넣어서 학습시킨다.
+
+### Position-wise Feed-Forward Networks
+각 encoder, decoder 블럭의 마지막 sub-layer에는 FC feed-forward network가 있다. 이 layer는 2중 FC와 중간에 activation function으로 ReLU가 있는 구조다. 식으로 나타내면 다음과 같다.
+
+$$
+FFN(x) = max(0, xW_1 + b_1)W_2 + b_2
+$$
+
+각 FFNN layer마다 다른 parameter를 가지고 있고, 512 → 2048 → 512 차원으로 구성된다.
+
+### Embedding and Softmax
+decoder의 output을 다음 토큰에 대한 확률 값들로 변환하기 위해 일반적으로 학습된 linear transformation과 softmax를 이용한다. 그리고 input/output embedding layer와 decoder 블럭들 이후에 있는 linear transformation에 대해 동일한 weight matrix를 이용한다.
+
+### Positional Encoding
+recurrence나 convolution 없는 어텐션 메커니즘만 이용하기 때문에, 모델이 sequence의 순서에 대한 정보를 알 수 있도록 sequence 내의 각 토큰들에 대한 상대적인/절대적인 위치에 대한 정보를 제공해 주어야 한다. 이를 위해 ‘positional encodings’라는 값을 input embedding 값에 더해준다. positional encoding은 input embedding에 쉽게 더할 수 있도록 $d_{model} = 512$  와 동일한 차원을 가지며 positional encoding을 결정하는 방법에는 여러가지가 있는데 논문에서는 다음 공식을 이용한다.
+
+$$
+PE_{(pos, 2i)} = sin(pos/10000^{2i/d_{model}})
+$$
+
+$$
+PE_{(pos,2i+1)} = cos(pos/10000^{2i/d_{model}})
+$$
+
+공식을 이용하지 않고 positional encoding 도 학습시켜서 사용해도 그 결과는 공식을 이용하는 것과 거의 유사하게 나타났다.
+
+### Why Self-Attention
+![table 1](../blogImage/1-table1.png)
+$n$= sequence length, $d$ = dimension.
+
+일반적으로 sequence length($n$)가 dimension($d$)보다 작기 때문에 total computational complexity per layer 부분에서도 Self-Attention이 더 뛰어나다는 것을 알 수 있다.
+
+## Conclusion
+
+translation tasks에 대해 transformer가 다른 recurrent, convolutional 기반 아키텍쳐보다 훨씬 빠른 속도로 학습되었다. 여러 translation tasks에서 SOTA를 달성하기도 했다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

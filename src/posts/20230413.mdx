@@ -1,0 +1,211 @@
+---
+id: "20230413"
+slug: "/20230413"
+title: "ABDUCTIVE COMMONSENSE REASONING"
+description: ""
+author: "Vive Kang"
+date: "2023-04-13"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+Abductive reasoning이란 명확하지 않은 상황에 대해서 가장 그럴듯한 (상황)설명을 추론하는 것이다. 아래와 같이 O1, O2의 상황이 주어졌을 때 사람은 H1이 가장 그럴듯한 설명이 된다는 걸 추론해 낼 수 있다.
+
+![0](../blogImage/26-0.png)
+
+기존 제공된 정보를 사용하는 entailment같은 inference와는 다르게, abductive reasoning은 새로운 아이디어를 만들어 내는 논리적 연산 과정이다.
+
+사람에게 있어서 이해 과정의 핵심인 abductive reasoning이지만 NLP 분야에서 연구가 거의 되지 않았고 따라서 논문에서는 language-based abductive reasoning의 가능성을 열어주는 첫번째 연구를 진행한다. 
+
+구체적으로, Abductive Natural Language Inference($\alpha$ NLI), Abductive Natural Language Generation($\alpha$ NLG)를 새로운 reasoning task로 제안한다. $\alpha$NLI는 더 그럴듯한 설명(explanation)을 고르는 multi-choice task이다. 그리고 20K개의 스토리, 200K개의 설명 가설(explanatory hypothesis)을 가진 새로운 dataset인 ART도 소개한다. $\alpha$NLI에 대해 최고의 성능을 보인 BERT기반의 baseline의 경우 68.9%의 성능을 보였고 이는 human performance 91.4%에 한참 미치지 못하는 수준이었다. $\alpha$NLG에서 최고의 성능을 보인 GPT2 기반의 baseline은 human performance에 거의 미치는 성능을 보여주었다. 
+
+## Task Definition
+
+**Abductive Natural Language Inference**
+
+$\alpha$NLI task에서는 context로 한 쌍의 상황에 대한 설명과 두개의 선택지(hypothesis)가 주어진다. dataset ART에서는 다음과 같이 정의된다.
+
+- $O_1$: 먼저 일어난 상황에 대한 관찰
+- $O_2$: 이후 일어난 상황에 대한 관찰
+- $h^+$: $O_1, O_2$ 에 대해 전부 그럴듯한 hypothesis
+- $h^-$: $O_1, O_2$에 대해 그럴듯하지 않거나 덜 그럴듯한 hypothesis
+
+여기서 $\alpha$NLI task는 가장 그럴듯한 $h^+$ hypothesis를 선택하는 task이다.
+
+**Abductive Natural Language Generation**
+
+$\alpha$NLG는 $O_1, O_2$에 대해 hypothesis $h^+$를 생성해내는 task이다. $P(h^+|O_1,O_2)$를 최대화하도록 task를 수행한다.
+
+## Models for Abductive Commonsense Reasoning
+
+### Abductive Natural Language Inference
+
+**A Probabilistic Framework for $\alpha$NLI**
+
+$\alpha$NLI task는 $O_1, O_2$에 대해 가장 확률 높은 hypothesis인 $h^*$를 선택하는 것이다.
+
+![1](../blogImage/26-1.png)
+
+확률 P를 $O_1$에 대한 Bayes Rule을 사용해 다시 정의하면 다음과 같다.
+
+![2](../blogImage/26-2.png)
+
+![3](../blogImage/26-3.png)
+
+그리고 여러가지 모델을 만들어 비교해보았다. 
+
+**Hypothesis Only**
+가장 단순한 모델로 hypothesis가 두 개의 Observation에 대해 독립적이라는 가정을 갖는 모델이다. 즉, $H \perp O_1, O_2$ 라는 의미이고, $P(H)$를 최대화하는 것에 초점을 둔다.
+
+**First(or Second) Observation Only**
+hypothesis가 $O_1$이나 $O_2$ 중에 하나에만 의존한다는(연관되어 있다는) 가정을 갖는 모델이다. 둘 중 하나만 사용한다.
+
+**Linear Chain**
+hypothesis가 두 개의 observation를 고려하긴 하지만 두 observation은 hypothesis에 독립적으로 영향을 끼친다. 즉, 두 observation이 서로 관련없다는 의미($O_1\perp O_2|H$)이고, 이는 observation 두 개를 동시에 사용해서 얻을 수 있는 정보는 사용하지 않는다는 뜻이다. 따라서 앞에서 말한 Bayes Rule 식보다 간단한 objective를 최대화한다.
+
+![4](../blogImage/26-4.png)
+
+**Fully Connected**
+3가지를 동시에 고려하는 가장 정교한 모델이다. hypothesis를 선택하기 위해 observation 간의 정보를 합칠 수 있다.
+
+Linear Chain 모델과 Fully Connected 모델의 차이의 구별하기 위해, 다음의 예시를 가정한다.
+
+- $O_1$: "Carl went to the store desperately searching for flour tortillas for a recipe."
+- $O_2$: "Carl left the store very frustrated."
+- $h^1$: "The cashier was rude"
+- $h^2$: "The store had corn tortillas, but not flour ones."
+
+이 예시에서 Linear Chain 모델은 잘못된 답($h^1$)을 낸다. $O_1$만 봤을 때 $h^1$과 $h^2$가 둘 다 그럴듯해 보이고, $O_2$만 봤을 땐 $h^1$이 $h^2$보다는 더 자연스러워 보이기 때문이다. 이런 식으로 $O_1 \rightarrow h^* \rightarrow O^2$ 를 chaining하는 것($O_1$ 와 $O_2$ 를 개별적으로 보는 것)은 Linear Chain 모델에게 $h^1$(오답)이 더 자연스러워 보이게 만들 수 있다. 
+
+위 5가지 모델들에 대해 각각의 best performing NN 모델을 이용했다. hypothesis-only와 single observation 모델에서는 모델의 input에 제약을 둠으로써 개별적으로 동작하도록 할 수 있다. Linear Chain에서는 3개의 variable($O_1$, $O_2$, $h^*$)을 전부 input 받지만, 모델에 특정 조건을 걸어서 개별적으로 동작하도록 했다. 구체적으로는 discriminative classifier를 학습시켰고 그 식은 다음과 같다.
+
+![5](../blogImage/26-5.png)
+
+### Abductive Natural Language Generation
+
+각 sequence token $h^+=\{w_1^h,...,w_l^h\}, O_1=\{w_1^{o1},...,w_m^{o1}\}, O_2=\{w_1^{o2},...,w_m^{o2}\}$이 주어질 때, $\alpha$NLG task는 다음과 같이 negative log-likelihood를 최소화하도록 학습된다.
+
+![6](../blogImage/26-6.png)
+
+$K$는 background knowledge(optional). ART dataset을 통해 학습된다.
+
+## ART Dataset: Abductive Reasoning in narrative Text
+
+ART는 ~20K 개의 narrative contexts(observation $O_1, O_2$ pair)와 200K개 이상의 hypothesis로 구성되어 있다. 
+
+![7](../blogImage/26-7.png)
+
+![8](../blogImage/26-8.png)
+
+Figure 4는 ART dev set 중 한 예시인데, BERT를 기반으로 한 최고의 모델이 처음 2개의 예측에 실패했다. 
+
+**Collecting Observations**
+
+그럴듯한/그럴듯하지 않은 hypotheses에 대해 두개의 다른 task를 통해 crowdsourcing 했다.
+
+1. plausible hypothesis option
+$O_1, O_2$를 보여주고 그 사이에 어떤 일이 있었을 지에 대해 작성하게 했다. 
+2. implausible hypothesis option
+$O_1, O_2$와 다른 context의 plausable hypothesis $h^+$를 보여준 뒤, $h^+$에서 최소한의 수정(최대 5단어)를 거쳐서 implausable hypothesis를 만들게 했다.
+
+crowdsourced dataset에서 문제되고 있는 annotation artifacts를 피하기 위해, 하나의 < $O_1, O_2$ > pair에 대해 여러 개의 plausable/implausable hypothesis를 만들게 하고 adversarial filtering algorithm을 통해 가장 구별이 어려운 hypothesis pair를 선택했다. 
+
+## Experiments and Results
+
+ART dataset을 이용해 sota pre-trained LM을 fine-tuning한 모델과 $\alpha$NLI, $\alpha$NLG에 대한 여러 baseline들을 평가해봤다. $\alpha$NLI는 binary classification task이기 때문에 accuracy metric을 이용하고 $\alpha$NLG는 BLEU와 human evaluation을 이용한다.
+
+### Abductive Natural Language Inference
+
+여러 NLP benchmark dataset에서 좋은 모습을 보여준 모델들이 ART에서는 가장 높은 성능이 68.9%(BERT)밖에 안 나왔다(human performance 91.4%). Fully Connected 모델에서 개별적으로 사용하도록 추가적인 가정을 넣은 모델의 성능이 안 좋은 경향을 보였다.
+
+![9](../blogImage/26-9.png)
+
+**Human Performance**
+
+ART test set에서의 human performance는 91.4%가 나왔다.
+
+**Baselines**
+
+단순한 feature들에만 의존하는 baseline을 포함시켜서 ART가 annotation artifacts때문에 쉽게 해결가능한 문제가 아니라는 걸 증명하려고 했고, 모든 simple baseline들의 accuracy가 50%에 가까운 값을 보였기 때문에 ART가 annotation artifacts로부터 자유롭다는 걸 보였다.
+
+$\alpha$NLI와 관련있지만 구별되는 task인 entailment NLI(e.g. SNLI)에 대한 모델도 baseline으로 활용했다. entailment NLI에서 sota에 근접한 성능을 보인 ESIM+ELMo(88.9%)를 재학습시켰다. 이 모델은 ART에서 고작 58.8%의 성능을 보였는데, 이는 entailment보다 ART가 더 많은 언어적인 이해가 필요하다는 걸 뜻한다.
+
+**Pre-trained Language Models**
+
+ART dataset에서 BERT-ft [Fully Connected]가 성능이 68.9%로 가장 좋았다. GPT에서는 63.1%였다. 그리고 Adversarial Filtering을 하기 전과 후로 BERT의 성능이 88%에서 20% 감소했다.
+
+**Learning Curve and Dataset Size**
+
+![10](../blogImage/26-10.png)
+
+10000개의 instance를 학습시킨 이후부터 수렴하는 모습을 보였다.
+
+**GPT Adversary**
+
+Table 1에 나와있듯이 GPT로 Adversarial filtering을 했더니 GPT의 accuracy가 53%아래로 내려갔다. BERT에서는 Fully Connected 모델이 Linear Chain 모델보다 성능이 더 좋았다(65% → 72%). 따라서 BERT fully connected 모델을 ART에 대한 adversary(adversarial filtering을 수행할 모델)로 삼는다. linear chain BERT 모델과 fully connected BERT 모델의 차이는 BERT를 adversary로 사용하게 되면서 감소하게 되는데, 이는 adversarial filtering이 모델에 불규칙하게 영향을 미친다는 걸 뜻한다. 그러나 adversary로 사용되지 않은 모델들은 이 dataset에 더 어려움을 느낀다. 예를 들어, adversarial filtering 하기 이전의 BERT와 GPT는 각각 88%, 80%의 성능을 보였다. 
+
+### Abductive Natural Language Generation
+
+**Generative Language Models**
+
+앞선 이 식을 통해 GPT2를 학습시켰다.
+
+![11](../blogImage/26-11.png)
+
+GPT2에 COMET의 commonsen knowledge를 사용하는 2가지 방식을 실험했다. (1) textual phrase, (2) embedding
+
+![12](../blogImage/26-12.png)
+
+$O_1, O_2$의 각 input token에 대해 word-embedding layer를 거쳐 embedding한 후, 18개의 embedding을 sequence에 적용했다(COMET의 9개 relation * 2개의 observation). 그 이후에 transformer 아키텍쳐에 입력한다. 이 방식을 통해 모델은 각 토큰의 representation도 배우고 COMET embedding을 통해 background commonsense knowledge를 LM에 효율적으로 합칠 수 있다(그림에서 보면 18개의 embedding 뒤에 word embedding이 concat되는 방식으로 입력된다).
+
+**Discussion**
+
+![13](../blogImage/26-13.png)
+
+Human-written Hypotheses의 결과 지표는 각 지표에서의 ceiling을 보여준다. 사람이 만들고 사람이 답변한 문제에 대해서는 96%의 정확도를 보였다. background commonsense knowledge를 사용한 최고의 모델도 44.56%의 성능 밖에 나오지 않았다.
+
+## Analysis
+
+### $\alpha$NLI
+
+**Commonsense reasoning categories**
+
+![14](../blogImage/26-014png)
+
+commonsense-based abductive reasoning의 카테고리를 분류해보았다. hypothesis 선택지와 category-specific한 키워드를 비교해서 카테고리를 분류했고, 위 표는 BERT-ft 모델이 3가지 카테고리에서 보인 accuracy 값을 나타낸다. BERT-ft는 Numerical category에서 56.8%로, Spatial에서 65.4%로 낮은 성능을 보였다. 반면 Emotinal category에서는 72.6%로 높은 성능을 보였다.
+
+**Implausable transitions**
+
+![15](../blogImage/26-15.png)
+
+implausable hypothesis에 대해 3가지 주요한 분류를 했다. 
+
+1. $O_1 \not \rightarrow h^-$: $h^-$가 observation $O_1$ 다음에 일어날 것 같지 않다.
+2. $h^- \not \rightarrow O_2$: $h^-$가 $O_1$ 다음에 오는 건 자연스럽지만 이후 $O_2$가 일어날 것 같지 않다.
+3. Plausable: < $O_1, h^-, O_2$ > 가 적절히 일관성 있는 이야기를 구성하지만, < $O_1, h^+, O_2$ >가 더 적절하다.
+
+Table 4는 ART test set에서 1000개를 조사한 결과이다. $h^- \not \rightarrow O_2$가 거의 절반을 차지했다. 모델은 오답인 hypothesis도 그럴듯한 이야기를 만들어 내지만 정답 hypothesis가 더 적절할 때 정답을 찾기 어려워했다. 그리고 Fully Connected 모델이 Linear Chain 모델보다 잘 동작했는데 두 observation을 동시에 고려하는 게 중요하다는 걸 보여준다.
+
+### $\alpha$NLG
+
+![16](../blogImage/26-16.png)
+
+Figure 6는 두가지 결과 예시에 대해 보여준다. 왼쪽 문제는 사람만 정답을 맞췄고, 오른쪽은 COMET-Emb+GPT2 모델도 정답을 맞췄다.
+
+## Transfer Learning from ART
+
+ART를 benchmark로 사용하는 것 말고, ART를 다른 commonsense task의 성능을 향상시키는 resource로 사용할 수 있을 지에 대해서 확인해봤다. 먼저 ART로 모델을 학습시킨 후, 4개의 다른 target dataset으로 추가 학습시켰다. 
+
+![17](../blogImage/26-17.png)
+
+target dataset으로만 학습시킨 모델과 비교해봤을 때 ART로 먼저 학습시킨 모델의 성능이 더 좋았다. 특히 ART로 pre-training한 모델은 관련된 dataset으로 학습시킬 때 그 양이 적더라도 좋은 성능을 보였다. 그러나 target dataset의 양이 많을 때는 ART pre-training의 효과가 거의 없었다.
+
+## Conclusion
+
+이 논문을 통해 language-based abductive reasoning에 대한 가능성을 열어 주었다. Abductive Natural Language Inference($\alpha$ NLI)와 Abductive Natural Language Generation($\alpha$ NLG) task를 제안했고 이를 위해 ART dataset을 만들었다. $\alpha$NLI에서는 사람은 91.4\%, 최고 성능 LM은 68.9\%로 큰 차이를 보였고, $\alpha$NLG에서는 사람 96% 최고 성능 모델은 45%로 더 큰 차이를 보였다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

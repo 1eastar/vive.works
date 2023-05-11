@@ -1,0 +1,139 @@
+---
+id: "20230429"
+slug: "/20230429"
+title: "LAMOL: LANGUAGE MODELING FOR LIFELONG LANGUAGE LEARNING"
+description: ""
+author: "Vive Kang"
+date: "2023-04-29"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+요즘 특정 목적으로 모델을 학습시키는 isolated learning 방식을 주로 사용한다. 하지만 이 방식에서 모델은 이전에 배웠던 지식을 유지하고 축적시켜 나갈 수 없다. 여러 개의 task를 학습시킬 수록 모델은 catastrophic forgetting(Figure 1-left)의 문제가 발생한다. 반면, lifelong learning은 task들 간의 지식들을 축적하고 각 task에서의 성능을 유지할 수 있도록 설계되었다. 사람은 lifelong learning을 쉽게 하지만 기계는 그렇지 않기 때문에 lifelong learning은 중요한 step이라고 볼 수 있다.
+
+![0](../blogImage/31-0.png)
+
+이전의 연구들에서는 같은 task에서 다른 domain을 이용했지만, 논문에서는 다른 task들의 lifelong language learning을 위해 LAMOL - LAnguage MOdeling for Lifelong language learning을 소개한다.
+
+많은 NLP task가 QA task로 여겨질 수 있음이 밝혀졌기 때문에, context와 question으로 정답을 내도록 LM을 학습시켜서 multiple NLP task를 다루었다. 그러나 이 방법만으론 LLL의 문제를 해결할 수는 없는데, 이렇게 stream of task로 학습시키면 catastrophic forgetting은 여전히 발생한다. LM은 근본적으로 text generator이기 때문에 질문에 답을 하면서 동시에 이전 task의 pseudo-sample(나중에 학습하기 위한 샘플 데이터)을 생성하게 할 수 있다. LAMOL은 generator가 이전 task의 sample을 생성하도록 학습되는 LLL의 방식(Figure 1-middle)에 영감을 받았다. 이전 방식과는 다르게 LAMOL은 generator가 필요없다(Figure 1-right). LAMOL은 multitask learning과 유사하지만 이전 task에 대해 실제 데이터를 사용하는 게 아니라 모델이 직접 데이터를 생성한다는 점에서 다르다.
+
+**Main Contribution**
+
+- LLL에 효과적은 방법인 LAMOL을 소개한다. 이 방식은 추가적인 메모리나 모델의 크키를 키울 필요가 없다. 그리고 몇개의 task를 학습시킬 것인지 미리 알 필요가 없고 언제든 새로운 task를 학습시킬 수 있다.
+- 실험 결과 baseline들이나 sota 방법들보다 뛰어난 성능을 보였다.
+- pseudo-sample을 만들 때 task-specific한 토큰을 추가해서 모든 이전 task들 간에 고르게 샘플을 생성하도록 했다. 이는 특히 task를 학습시킬 때 유용한 방식이었다.
+- pseudo-sample의 양이 최종 성능에 미치는 영향을 분석했다. task-specific 토큰이 있을 때와 없을 때 둘 다.
+
+## LAMOL
+
+pre-trained LM은 주어진 context에 대해 일관된 sequence of text를 생성할 수 있다. 따라서 single LM을 학습하는 방법인 LAMOL을 제안한다. LAMOL은 주어진 context와 question에 대해 답변만 하는 게 아니라 주어진 generation token에 기반해 context, question, answer를 생성하도록 학습한다. 따라서 질문에 답하는 것과 pseudo-sample을 생성하는 작업이 single LM을 통해 작동한다. 이 pseudo-sample은 새로운 task의 데이터와 함께 모델을 학습시키는 데 사용되어서 catastrophic forgetting을 완화한다.
+
+### Data Formatting
+
+![1](../blogImage/31-1.png)
+
+LM은 동시에 QA 모델일 수 있는데, 데이터 형태는 training objective에 따라 다르다. QA 모델로 학습하려고 할 때, LM은 context와 question을 읽은 후 정답은 decode하도록 학습된다. LM으로 학습하려고 할 때는 주어진 generation token에 대해 3가지 파트 전부를 decode하도록 학습된다. 여기서 context, question, answer 말고 3개의 special token이 추가로 사용된다.
+
+- ANS - inference 때 context와 question은 아는 값이기 때문에 이 토큰 이후부터 decoding한다.
+- EOS - end of sequence
+- GEN - pseudo-sample generation의 시작 토큰. GEN 토큰이 나타나면 decoding을 시작한다.
+
+### Training
+
+몇개인지 알 수 없는 task \{ $T_1,T_2,...$ \}가 있다고 가정하자. new task $T_i$를 학습하기 전에 모델은 먼저 이전 task들 $\{ T_1,...,T_{i-1} \}$에 대해 top-k sampling을 통해 pseudo sample $T_i^{'}$을 생성한다. 이후 모델은 $T_i$과 $T_i^{'}$를 합쳐서 학습을 진행한다. $|T_i|$와 $|T_i^{'}|$의 비율을 맞추기 위해 LM은 $\gamma|T_i|$만큼의 pseudo-sample을 만든다.
+
+훈련할 때, 각 샘플은 QA format과 LM format으로 각각 변환된다. 이후 같은 optimization step으로 두 format은 QA loss $L_{QA}$와 LM loss $L_{LM}$을 동시에 최소화하도록 학습된다. 최종 loss $L$은 $L = L_{QA}+\lambda L_{LM}$이다.
+
+### Task-Specific Tokens
+
+모든 task에 동일하게 하나의 GEN 토큰을 사용하면 오래된 task일수록 그 비율이 감소하는 문제가 생길 수 있다. 이를 완화하기 위해, task-specific한 토큰을 GEN 토큰으로 사용하고 $\gamma|T_i|$만큼의 pseudo-sample을 만들 때 각 task 별로 ${\gamma\over i-1} |T_i|$만큼의 샘플 씩 만든다. 각 task별로 specific한 토큰을 사용하기 때문에, task가 추가될수록 LM의 vocabulary size와 embedding weight가 증가하게 된다.
+
+## Experiment Setup
+
+### Tasks, Datasets, and Metrics
+
+decaNLP에 명시된 5가지의 task(question answering, semantic parsing, sentiment analysis, semantic role labeling, goal-oriented dialogue)를 선택했고 각 task마다 하나의 dataset을 선택했다. 
+
+그리고 LAMOL method를 비교하기 위해 5개의 dataset으로 4개의 text classification task(news classification, sentiment analysis, Wikipedia article classification, question-and-answer categorization)에 대해서 실험했다. 
+
+![2](../blogImage/31-2.png)
+
+### Methods to be Compared
+
+모든 methods에서 가장 작은 GPT-2 모델을 이용했다.
+
+- **LAMOL**
+top-20 sampling + $\lambda$(weight of the LM loss) = 0.25로 모든 실험을 진행했다. LAMOL$_{GEN}^{\gamma}$는 모든 task에 동일하게 GEN 토큰을 사용하고 sampling ratio $\gamma$를 사용했다는 뜻이다. task-specific한 토큰을 사용했을 땐 GEN 대신 TASK라고 작성했다.
+- **Keep real data**
+pseudo-sample을 사용하지 않고 실제 데이터를 이용하는 method이다. 이 방식은 LAMOL의 upper bound라고 생각할 수 있다.
+- **Fine-tune**
+모델을 stream of task들에 대해 바로바로 fine-tuning을 진행하는 방법이다.
+- **Multitask learning**
+모든 task를 동시에 학습한다. Multitask learning은 lifelong learning의 upper bound로 여겨지기도 한다. 그리고 이 방식을 통해 모델의 크기가 forgetting의 문제였는지 확인할 수 있다.
+- **Regularization-based methods**
+online EWC, MAS와 비교했다.
+- **Gradient Episodic Memory (GEM)**
+각 task를 학습할 때, 이전 task에서 현재 task의 5%에 해당하는 양만큼 샘플링해서 사용한다.
+- **Improved memory-based parameter adaptation (MBPA++)**
+
+## Experimental Results
+
+### Single Task
+
+![3](../blogImage/31-3.png)
+
+모든 dataset에 대한 GPT-2의 기준점을 만들기 위해 각 dataset별로 모델에 학습시켰다. GPT-2 모델이 다른 모델들보다 좋은 성능을 보였기에 catastrophic forgetting 문제만 해결한다면 LLL performance 충분한 잠재력을 가지고 있다.
+
+### SST, QA-SRL, and WOZ Tasks
+
+모든 method들의 성능과 학습시키는 task의 순서의 중요성에 대해 이해하기 위해, 먼저 3가지 dataset(SST, QA-SRL, WOZ)에 대해 작은 규모의 실험을 진행했다. multitask learning를 제외하고 모든 method로 총 6가지의 permutation에 대해 데이터를 학습시켰다. 참고로 $\gamma$ = 0 일 때 그냥 fine-tuning 하는 것과 동일하다고 생각할 수 있는데, 0일 때도 LM loss는 optimize되기 때문에 완전 같지는 않다. 아래는 그 결과 표이다.
+
+![4](../blogImage/31-4.png)
+
+- Fine-tuned, EWC, MAS, $\gamma$ = 0 LAMOL은 거의 비슷한 성능을 보였고 $\gamma$ > 0 일 때보다 성능이 훨씬 안 좋았다.
+- 최고의 모델인 LAMOL$_{GEN}^{0.2}$은 multitask learning과 성능이 1.8 밖에 차이나지 않았다. 이는 거의 forgetting이 없음을 뜻한다.
+- task의 순서도 성능에 중요한 영향을 끼쳤다. WOZ의 경우 마지막 task가 아닐 때 성능이 엄청 감소했다.
+- LAMOL을 사용할 때 전체 학습 과정에서 이전 task의 성능은 거의 유지되었다. $\gamma$가 0에서 0.05까지 증가하면서 성능은 상승했다.
+- $\gamma$ = 0 일 때는 task-specific token을 사용하면 성능이 감소했다. 사용하지도 않을 추가적인 special token이 포함되어 있었기 때문이다. $\gamma$ = 0.2에서는 task-specific token을 사용하는 게 별로 도움이 되지 않았고 0.05에서는 도움이 되었다.
+- 좋은 LLL method는 일반적으로 작은 분산을 가졌다. 이는 task order에 영향을 적게 받는다는 의미이다. task-specific token이 안정화에 도움이 되었다.
+
+### Five decaNLP Tasks
+
+다음의 5개 task를 순서대로 학습시켰다. SQuAD, WikiSQL, SST, QA-SRL, WOZ. 
+
+![5](../blogImage/31-5.png)
+
+LAMOL method가 다른 method들 보다 훨씬 좋은 성능을 보였고 multitasked upper bound보다 2-3%밖에 낮지 않았다. 그리고 예상대로 sampling ratio $\gamma$가 커질수록, task-specific token을 사용할 수록 성능이 좋았다.
+
+5% real sampling이 20%의 pseudo-sampling보다 성능이 좋았다. 모델이 샘플링을 하면 할수록 좋은 퀄리티의 sample을 만들어내기 어렵기 때문일 것이라고 말한다. 몇몇 pseudo-sample들은 task-specific token에 일치하지 않았다. 이는 모델이 task-specific token만으로 각 task를 구분하게 하는 건 그렇게 강한 방법이 아님을 뜻한다. 
+
+![6](../blogImage/31-6.png)
+
+Figure 3는 훈련 전 과정에서 각 task별 score를 나타낸다. 여기서 LAMOL을 사용했을 때 거의 완벽히 task들을 기억하고 있음을 보여준다. 몇 가지 발견한 것이 있는데,
+
+- SQuAD를 학습하고 QA-SRL을 학습하기 이전인데도 QA-SRL의 점수가 거의 40점이 나왔다. 또한, SRL을 학습하자 SQuAD task에서의 점수가 높아졌다. 이는 이 두 task가 서로 transfer되는 유사한 task라는 걸 뜻한다.
+- WikiSQL과 QA-SRL 간의 transfer 능력은 굉장했다. Fine-tune과 MAS method에서 볼 수 있듯, SST 학습동안 WikiSQL을 잊어버린 후 QA-SRL을 학습할 때 WikiSQL 점수가 상당히 향상되었다.
+
+### Text Classification Tasks
+
+LAMOL과 sota method인 MBPA++를 비교했다. QA가 아닌 text classification task를 선택했는데 LM이 QA보다 text classification에 더 취약할 것이라고 믿었기 때문이다. 그 결과 LAMOL의 성능이 더 좋았다.
+
+![7](../blogImage/31-7.png)
+
+### Influence of Sampling Ratio $\gamma$
+
+$\gamma$의 값이 LLL의 성능에 중요한 영향을 미치기 때문에, task-specific token을 사용할 때와 사용하지 않을 때 둘 다 $\gamma$의 영향력에 대해 실험했다(Figure 4). 
+
+당연하게도, 모델이 샘플을 덜 생성할 수록($\gamma$가 낮을 수록) 시간이 갈수록 이전 task의 샘플을 생성하는 방법을 점차 잊어버렸다. task-specific token이 이 문제를 어느정도 해결해주긴 했다.
+
+$\gamma$ 값이 커질수록 전반적인 모델의 성능은 증가했고, $\gamma$가 0.1에서 0.3 사이가 되자 더 이상 이점을 얻지 못했다.
+
+## Conclusion
+
+language modeling에 기반한 LLL을 위한 방법인 LAMOL을 제안한다. 이 method를 사용하면 single 모델이 추가적인 모델 component와 이전 데이터를 기억하고 있을 필요 없이 LLL을 할 수 있다. 게다가 어떤 pre-trained LM이라도 LLL의 성능을 향상시키는데 사용될 수 있고, 마지막으로 얼마든지 task를 추가 학습할 수 있다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

@@ -1,0 +1,99 @@
+---
+id: "20230309"
+slug: "/20230309"
+title: "BERT(Bidirectional Encoder Representations from Transformers)"
+description: ""
+author: "Vive Kang"
+date: "2023-03-09"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+
+## Motivation & Introduction
+pre-trained language representation을 downstream tasks에 적용하는 전략으로는 feature-based, fine-tuning 2가지가 있는데, feature-based의 예로는 ELMo, fine-tuning의 예로는 GPT가 있다. 저자는 현재의 standard LM이 unidirectional한 특성을 갖고 있기 때문에 pre-trained representations에 큰 걸림돌이 되어 성능을 제한한다고 말한다. 예를 들어, GPT의 경우 LTR 아키텍쳐를 가지는데, 이는 sentence level task에서 뿐만아니라 문맥 파악이 중요한 QA같은 token level task의 성능을 저하시키는 요인이 된다.
+
+따라서 논문에서는 BERT를 소개한다. BERT는 Masked Language Model(MLM)과 Next Sentence Prediction(NSP)라는 2가지의 unsupervised task를 통해 pre-train되었고, 이를 통해 unidirectional의 제약에서 벗어나 bidirectional한 접근을 가능하게 했다. (정확하게 말하자면 MLM 덕분)
+
+## About BERT
+unlabeled data를 이용한 pre-training task를 통해 모델을 먼저 학습시킨다. 그 후 각각의 downstream task에 맞게 labeled data를 이용해 fine-tuning을 진행한다. pre-train된 하나의 parameter에서 시작해서 결과적으로 각각의 downstream task는 서로 다른 fine-tune된 모델을 갖게 된다. 
+
+pre-train된 아키텍쳐와 최종적으로 특정 task에 맞게 fine-tune된 아키텍쳐가 큰 차이가 없는 것이 BERT의 특징 중 하나이다.
+![figure 1](../blogImage/2-figure1.png)
+
+### Model Architecture
+BERT는 기본적으로 Transformer의 encoder block을 여러 개 쌓은 형태의 아키텍쳐를 가진다. $L$을 encoder block의 개수, $H$를 $d_{model}$값 즉 embedding 벡터의 차원, $A$를 Multi-Head Attention의 개수라고 하고 다음 두 종류의 BERT를 소개한다.
+![table 1](../blogImage/2-table1.png)
+
+### Input/Output Representations
+BERT가 다양한 downstream task를 처리할 수 있도록, 하나의 input sequence안에 두 개의 "sentence"까지 나타낼 수 있다. 논문에서 정의한 "sentence"란, 우리가 평소에 생각하는 형식을 제대로 갖춘 문장 형태라기 보다 연속적인 단어의 집합을 뜻한다. 한 문장 안에서도 수많은 "sentence"가 있는 것. 또한 논문에서 정의한 "sequence"는 하나의 "sentence" 또는 두개의 "sentence"를 하나로 이어붙인 것을 뜻한다.
+
+WordPiece embedding을 이용했고(playing → play, ##ing), 모든 sequence의 맨 앞에는 special token인 [CLS] 토큰을 집어넣고, 각 sentence의 끝마다 [SEP]라는 special token을 집어넣어 문장을 구분한다. 
+
+[CLS] 토큰의 최종 output으로 나오는 hidden state는 classification task에서 해당 sequence를 대표하는 값으로 사용된다. 
+
+만약 sequence에 2개의 sentence가 들어있다면 어떻게 구분할까? 첫째로 문장 말미에 넣어준 [SEP] 토큰을 이용한다. 둘째로 아래 그림의 Segment Embeddings 처럼 문장마다 다른 embedding 값을 넣어줌으로서 구분한다. input 값은 최종적으로 아래 3종류 embedding의 합이 된다.
+
+![figure 2](../blogImage/2-figure2.png)
+
+## Pre-training BERT
+MLM과 NSP 두 가지의 unsupervised task를 통해 pre-train 한다.
+
+### Masked LM (MLM)
+input sequence의 15%를 \[MASK\] 토큰으로 대체한 후 최종 output으로 나온 결과를 \[MASK\]로 바꾸기 전 값과 비교하여 학습하는 방식이다. 마스킹된 토큰의 최종 hidden vector는 학습된 weight matrix를 곱한 후 softmax의 input으로 들어가게 되고 그 결과로 각 vocabulary에 대한 probability distribution 값을 출력한다. 이 probability distribution 결과 값과 실제 값 간의 cross-entropy loss를 최소화하는 방향으로 학습이 진행된다.
+
+이 방식의 한 가지 단점은, 마스킹을 pre-training 과정에서만 사용하기 때문에 pre-training과 fine-tuning 사이에 mismatch가 생긴다는 것. task specific한 data에는 pre-train에서 이용했던 \[MASK\] 토큰이 없고, pre-train 과정에서 이런 종류의 data에 모델이 한번도 노출되지 않았다면 성능이 저하될 수 있다. 따라서 15%의 토큰을 항상 마스킹하는 것이 아니라 그 중 80%를 마스킹, 10%를 랜덤한 다른 토큰으로 변경, 10%는 기존 토큰 그대로 두는 방식을 이용한다. 즉, 10번 중에 8번은 마스킹을 하고, 1번은 랜덤한 토큰 값으로 바꿔주고, 1번은 그대로 둔다는 뜻이다. 왜 하필 8:1:1인지에 대해서는 여러 비율을 테스트해봤는데 가장 높은 성능을 보인 비율이 8:1:1이라고 소개하고 있다.
+
+### Next Sentence Prediction (NSP)
+QA, NLI 같은 downstream task에서는 문장 간의 관계 파악이 중요하기 때문에 NSP task를 통해 pre-training 한다. 
+
+pre-training data set에서 2개의 sentence A, B를 선택하게 되는데, B를 선택할 때 50%는 실제 A 다음에 오는 sentence를 선택하고(labeled as ***IsNext***), 50%는 랜덤한 sentence를 선택한다(labeled as ***NotNext***). \[CLS\] 토큰의 최종 hidden vector $C$를 통해 예측을 하고 학습을 하게 된다.
+
+![figure 3](../blogImage/2-figure3.png)
+
+## Fine-tuning BERT
+![figure 4](../blogImage/2-figure4.png)
+
+BERT 모델은 single text 부터 sentence pair까지 다룰 수 있기 때문에 input/output 값만 적절히 수정해주면 다양한 downstream task에 쉽게 fine-tuning이 가능하다.
+
+최종 output에서 토큰의 출력 값들은 token level의 task를 처리하는데 이용할 수 있고, [CLS]의 출력 값은 entailment, sentiment analysis 같은 classification task에 이용할 수 있다.
+
+pre-training과 비교할 때 fine-tuning은 상대적으로 가벼운 작업이다.
+
+## Ablation Studies
+1.  Effect of Pre-training Tasks
+bidirectionality의 중요성을 평가하기 위해 동일한 pre-training data, 동일한 fine-tuning scheme, $BERT_{BASE}$와 동일한 hyperparameters를 이용해 비교했다.
+
+![table 2](../blogImage/2-table2.png)
+
+- No NSP - MLM만을 이용해 pre-training을 진행한 것.
+- LTR & No NSP - MLM, NSP 둘 다 이용하지 않고 LTR LM을 이용해 pre-train
+
+"No NSP" vs "LTR & No NSP"
+
+⇒ "No NSP"가 모든 부분에서 성능이 뛰어난 것을 보임으로서 bidirectionality의 중요성을 시사한다.
+
+⇒ "Bi-LSTM"을 추가했을 때 성능이 향상되긴 했지만 pre-trained bidirectional 모델에는 미치지 못했다.
+
+2. Effect of Model Size
+Layer 수(#$L$), hidden vector의 차원(#$H$), attention head의 수(#$A$)를 바꿔가면서 모델의 size가 미치는 영향을 비교한다.
+
+![table 3](../blogImage/2-table3.png)
+
+또한, 이 논문에서는 충분히 pre-train된 모델을 이용해서 small-scale task를 다루려고 할 때 pre-train된 모델의 크기에 비례해서 task의 성능이 향상된다고 설명한다.
+
+이전에 pre-trained 모델의 크기가 일정 이상으로 커지면 더 이상 성능 향상이 되지 않는다는 연구가 있었지만 이는 모두 feature based approach 를 이용한 것이며, 아주 적은 수의 randomly initialized parameter만을 이용하고 fine-tuning을 이용했을 때 small downstream task이더라도 pre-trained 모델의 크기에 따라 성능이 좋아질 수 있다고 시사한다.
+
+3. Feature-based Approach with BERT
+논문에서 앞서 다루었던 설명이나 SOTA를 달성한 모델 등은 대부분 fine-tuning approach를 이용했지만 때로는 feature based approach가 더 나은 옵션일 때도 있다. 
+
+첫째로, 모든 task를 transformer의 encoder 아키텍쳐만을 이용해서 쉽게 접근할 수 있는 건 아니기 때문에 task-specific한 새로운 아키텍쳐를 추가해야하는 경우가 있을 수 있다.
+
+둘째로, 비싼 연산 과정을 거쳐 pre-train된 feature들을 task-specific한 data로 다시 학습시키지 않고 그대로 이용할 경우 큰 computational benefit을 가질 수 있다.
+
+## Conclusion
+transfer learning 덕분에, 충분히 unsupervised pre-training 하는 것이 language understanding system에서 이제는 필수적이다. 특히 task의  리소스가 적더라도 성능 향상을 가능하게 하기 때문이다. 이 논문에서는 하나의 bidirectional pre-trained 모델을 이용해 광범위한 NLP task를 처리할 수 있도록 하고자 한다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

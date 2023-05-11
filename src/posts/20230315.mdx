@@ -1,0 +1,208 @@
+---
+id: "20230315"
+slug: "/20230315"
+title: "XLNet: Generalized Autoregressive Pretraining for Language Understanding"
+description: ""
+author: "Vive Kang"
+date: "2023-03-15"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+
+## Motivation & Introduction
+unsupervised representation learning이 NLP 분야에서 최근 성공적인 모습을 보여주고 있는데, 일반적으로 많은 양의 unlabeled data를 pre-train하고 이후 downstream task를 위한 fine-tuning의 과정을 거친다. 대표적인 pre-training objective로는 AR과 AE가 있다.
+
+그러나 AR은 uni-directional한 context만 인코딩하도록 학습된다. 따라서 양방향 context를 깊게 이해하는 모델을 만들기에 비효율적이다.
+
+AE based pre-training은 손상된 input 값으로부터 원본 input을 예측하는 것에 초점을 둔다. 대표적으로 BERT가 있는데, BERT는 density estimation(밀도 추정: 전체 vocab에서 각각에 대한 확률 추정)이 objective가 아니기 때문에 원본 복구를 위해 bidirectional context를 사용할 수 있다. 그러나 [MASK] 토큰은 fine-tuning 때 사용하는 실제 데이터 상에는 존재하지 않기 때문에 pretrain-finetuning 사이에 차이가 존재한다. 그리고 [MASK] 토큰을 마스킹 되지 않은 토큰들만 context로 사용해 예측하기 때문에 마스킹된 토큰 간의 dependency를 학습할 수 없다는 문제점이 있다.
+
+따라서 이 논문에서는 XLNet을 제안한다. XLNet은 AR 언어 모델링과 AE의 장점을 모두 활용하고 그 단점은 없앤 generalized autoregressive LM이다.
+
+1. all possible permutations of the factorization order를 고려한다. permutation operation을 통해 bidirectional context를 학습하는 것과 같은 효과를 얻을 수 있다. ⇒ AR의 문제점 해결
+2. 마스킹 자체를 없애서(하지 않아서) AE의 문제점을 해결한다.
+
+새로운 pre-training objective에 이어서 아키텍쳐도 개선했다.
+
+1. 길이가 긴 sequence task에 좋은 성능을 보이는 Transformer-XL에서 아이디어를 가져왔다. pre-training 시에 Transformer-XL의 segment recurrence mechanism과 relative encoding scheme를 이용한다.
+2. factorization order와 target을 정확히 알 수 없기 때문에 transformer 아키텍쳐를 그래도 사용할 수 없다. reparameterize로 해결함.
+
+## Proposed Method
+
+### Background
+다음 3가지 측면에서 AR objective와 BERT의 denoising AE objective에 대한 장단점을 비교해보려 한다.
+
+1. Independence Assumption
+    
+    BERT는 모든 마스킹된 토큰이 실제 맥락에서는 서로 독립적이지 않지만, 각각을 예측할 때는 서로의 context를 모른 채 독립적으로 예측한다.
+    
+    AR LM은 forward/backward 한쪽 방향에 대해 이전에 등장한 context를 통해 예측한다.
+    
+2. Input noise
+BERT의 input은 마스킹 같은 인공적인 symbol이 포함되어 있고, 이런 symbol은 downstream task에서는 나타나지 않아 pre-training과 fine-tuning 간 차이를 만든다. 이를 예방하기 위해 일정 비율만큼 원래 토큰으로 되돌려 놓지만, 이는 너무 작은 비율이기 때문에 문제를 해결하지 못한다.
+AR LM은 input에 어떠한 손상도 가하지 않아서 이런 문제를 겪지 않는다.
+3. Context Dependency
+AR은 예측하려는 위치 이전의 토큰들에서만 정보를 얻을 수 있지만, BERT는 양방향 context를 포착할 수 있다.
+
+### Objective: Permutation Language Modeling
+앞서 설명한 것 처럼 AR language modeling과 BERT는 각각의 장단점이 있는데, 각 장점만을 가진 objective가 존재하는가? 에 대한 의문이 자연히 생긴다.
+
+저자는 AR 모델의 장점을 취하고 bidirectional context도 파악할 수 있는 permutation language modeling objective를 제안한다. 이는 길이 $T$의 sequence X가 있을 때 $T!$개의 permutation order에 대해 autoregressive factorization을 수행하고 따라서 전체 context의 정보를 얻을 수 있다. 
+
+길이가 $T$인 sequence의 index 값을 갖는 [1, 2, .., $T$]가 있고, 모든 가능한 permutation 집합을 $Z_T$라고 하자. permutation 중 하나인 $z(z\in Z_T)$에 대해 $z_t$는 t번째 요소를, $z_{<t}$는 처음부터 t-1번째까지의 요소를 나타낸다고 할 때, permutation language modeling objective를 다음과 같이 표현할 수 있다.
+
+$$
+\max_\theta \space\space E_{z\sim Z_t}[\sum_{t=1}^TlogP_{\theta}(x_{z_t}\space|\space x_{z_{<t}})]
+$$
+
+모델 parameter인 $\theta$는 학습할 때 모든 factorization order에서 동일하다. 따라서 bidirectional context 정보를 얻을 수 있고, 이 objective가 결국 각 order에 AR modeling을 적용하는 것이기 때문에 자연스럽게 AE의 문제점(independence assumption과 the pretrain-finetuning 간의 차이)을 해결할 수 있다.
+
+- **Remark on Permutation**
+    
+    ![1](../blogImage/7-1.png)
+    
+    중요한 건 앞서 설명한 objective는 factorization order만 섞는 것이고, sequence order는 그대로 둔다는 점이다. 즉, 기존 sequence order를 그대로 두고, 기존 sequence에 맞는 positional encoding도 사용하고, factorization order에서 학습 시 사용하지 않을 토큰에는 마스킹을 하기도 한다.
+    
+    이건 당연한 건데, 이렇게 학습된 모델을 fine-tuning 할 때는 항상 자연스러운 순서의 text sequence만 사용할 것이기 때문이다.
+
+### Architecture: Two-Stream Self-Attention for Target-Aware Representations
+permutation language modeling objective는 standard transformer에서 잘 동작하지 않는다.
+
+왜 그런지 살펴보기 위해, 예측하려는 토큰에 대한 확률 분포(softmax)인 $p_{\theta}(x_{z_t}|x_{z_{<t}})$가 다음과 같다고 가정해보자.
+
+$$
+p_{\theta}(x_{z_t}=x|x_{z_{<t}}) = \cfrac{exp(e(x)^T h_{\theta}(x_{z_{<t}}))}{\sum_{x^{'}}exp(e(x^{'})^T h_{\theta}(x_{z_{<t}}))}
+$$
+
+여기서 $h_{\theta}(x_{z_{<t}})$는 transformer network에서 생성된 $x_{z_{<t}}$의 hidden representation이다. 여기서 $h_{\theta}(x_{z_{<t}})$는 어느 위치의 토큰을 예측해야하는지 모른다. 예를 들어, sequence x=[x1,x2,x3,x4], z1=[4,3,2,1] 일 때, $p_{\theta}(x2|x4,x3)$을 계산하기 위해 $h_{\theta}(x4,x3)$을 사용해야 한다. z2=[4,3,1,2]인 경우, $p_{\theta}(x1|x4,x3)$을 계산하기 위해 $h_{\theta}(x4,x3)$을 사용한다. 이처럼 같은 $h_{\theta}(x4,x3)$ 값을 이용해 다른 값을 예측해야하는 문제가 생긴다. 전통적인 AR 모델은 input sequence가 정해져있고 하나씩 넣어주기 때문에 다음에 예측할 target이 명확한 반면, permutation 과정을 거치면서 이게 불분명해진 것이다.
+
+이 문제를 해결하기 위해, 예측하려는 토큰에 대한 확률 분포인 $p_{\theta}(x_{z_t}|x_{z_{<t}})$를 re-parameterize 할 것을 제안한다. 즉, 이전의 context token들의 정보($x_{z_{<t}}$) 뿐만 아니라 target index의 위치 정보($z_t$)도 함께 이용하는 새로운 Target Position-Aware Representation을 제안한다. 따라서 최종 식은 다음과 같이 만들 수 있다.
+
+$$
+p_{\theta}(x_{z_t}=x|x_{z_{<t}}) = \cfrac{exp(e(x)^T g_{\theta}(x_{z_{<t}},z_t))}{\sum_{x^{'}}exp(e(x^{'})^T g_{\theta}(x_{z_{<t}},z_t))}
+$$
+
+### Two-Stream Self-Attention
+그럼 $g_{\theta}$를 구성하는 일만 남았는데, $g_{\theta}$에는 다음 조건이 있다.
+
+1. 토큰 $x_{z_t}$를 예측하기 위해서 $g_{\theta}(x_{z_{<t}},z_t)$는 $x_{z_t}$값 자체가 아니라 position index 값인 $z_t$값만 이용해야 한다.
+2. $j >t$ 인 다른 토큰 $x_{z_j}$를 예측하기 위해서, $g_{\theta}(x_{z_{<t}},z_t)$는 $x_{z_t}$값도 인코딩해야 한다.
+
+standard transformer는 하나의 토큰에 대해 한 layer당 하나의 representation을 갖는데, 이 구조로는 두 모순적인 조건을 만족시킬 수 없다. 따라서 논문에서는 2개의 hidden representation을 같이 사용하는 변형된 transformer 구조를 소개한다.
+
+- Content Representation: $h_{\theta}(x_{z_{\le t}})$
+    
+    standard transformer의 hidden state와 동일한 역할을 한다. $x_{z_{t}}$를 포함한 이전 값들을 이용해 계산되는 representation이다.
+    
+    첫번째 layer의 content stream은 해당 위치 토큰의 word embedding으로 초기화($h_i^{(0)}=e(x_i)$)되고, 최종 representation 까지의 흐름(stream)은 다음과 같다.
+    
+    $$
+    h_{z_t}^{(m)} \leftarrow Attention(Q = h_{z_t}^{(m-1)}, KV = h_{z_{\le t}}^{(m-1)};\theta)
+    $$
+    
+    - $x_{z_t}$까지의 값을 알고 있다.
+    - 이를 통해 2번 조건을 만족한다.
+    
+    ![2](../blogImage/7-2.png)
+    
+- Query Representation: $g_{\theta}(x_{z_{<t}},z_t)$
+    
+    $x_{z_{<t}}$값들과 position index 값인 $z_t$값을 이용해 계산되는 representation이다.
+    
+    최종 query representation output을 통해 현재 위치의 토큰을 예측하는 pre-training objective를 계산한다. 첫번째 layer의 Query Stream은 학습할 수 있는 랜덤한 값($w$)으로 초기화($g_i^{(0)}=w$)하고, 최종 representation 까지의 흐름(stream)은 다음과 같다.
+    
+    $$
+    g_{z_t}^{(m)} \leftarrow Attention(Q = g_{z_t}^{(m-1)}, KV = h_{z_{<t}}^{(m-1)};\theta)
+    $$
+    
+    - 위치 값인 $z_t$는 사용하지만 $x_{z_t}$는 알지 못한다.
+    - 이 representation을 통해 위의 1번 조건을 만족한다.
+    
+    ![3](../blogImage/7-3.png)
+    
+
+![4](../blogImage/7-4.png)
+
+(a)는 context stream, (b)는 query stream, (c)는 전체적인 구조를 나타낸다. (a)를 보면 context stream attention은 self-attention과 동일한 것을 알 수 있다.
+
+파라미터($\theta$)는 두 stream간에 공유하며 학습이 진행되고, fine-tuning 할 때는 query stream을 없애고 content stream만을 이용해 기존 transformer처럼 사용한다.
+
+### Partial Prediction
+여태 이야기했던 permutation language modeling objective는 여러 장점들이 있지만, 모든 토큰에 대해 permutation을 진행하다보니 sequence의 길이가 길 수록 permutation 집합이 기하급수적으로 늘어나게 된다. 따라서 최적화하기가 까다롭고, convergence 속도도 느리게 만든다.
+
+이를 해결하기 위해, 한 factorization order z1이 있을 때, 특정 토큰 c를 선택하고 c보다 뒤에 나오는 토큰들만 target으로 예측하도록 수정한다. c를 정하기 위해 hyperparameter K를 사용하는데, 각 sequence 별로 $|z|/(|z|-c) \approx K$ 를 만족하는 c 값을 사용한다. 최적화를 위해 target이 되지 않는 c이전에 나오는 토큰들에 대해서는 query representation을 계산하지 않는다.
+
+### Incorporating Ideas from transformer-XL
+XLNet에서는 긴 문장에 대한 처리를 위해 transformer-XL에서 사용된 2가지 테크닉을 사용했다. Relative Positional Encoding와 Segment Recurrence Mechanism 이 2가지를 pre-training에 포함시켰다.
+
+relative positional encoding은 original sequence에 맞춰서 적용한다고 앞서 설명했다.
+
+Segment Recurrence Mechanism를 설명하기 위해, 긴 sequence에 2개의 연속된 segment $\tilde{x} = s_{1:T}, x = s_{T+1:2T}$가 있다고 가정하자. 그리고 각각의 permutation을 $\tilde{z} = [1,...,T], z = [T+1, ...,2T]$ 라고 하자. 먼저 첫번째 segment $\tilde{z}$에 대해서 모든 $m$개의 layer에 대해 content representation $\tilde{h}^{(m)}$을 구하고 캐싱해둔다. 그 후 다음 segment에 대한 $h^{(m)}$은 다음 식으로 표현된다.
+
+$$
+h_{z_t}^{(m)} \leftarrow Attention(Q=h_{z_t}^{(m-1)}, KV=[\tilde{h}^{(m-1)}, h_{z_{\le t}}^{(m-1)}];\theta)
+$$
+
+KV = [] 에서 대괄호는 concat을 의미한다. 식에서 알 수 있듯 이전 segment에 대한 $\tilde{h}^{(m)}$를 한번 계산하고 나면 다음 segment 계산을 할 때 다시 계산할 필요 없이 캐싱된 값을 사용한다. 즉, 이전 segment에 대한 factorization order를 고려하지 않고 memory의 caching과 reusing이 가능한 것이다. query representation도 동일한 방식으로 계산할 수 있다.
+
+### Modeling Multiple Segments
+많은 downstream task들은 여러 개의 segment를 input으로 받는다. 예를 들어, QA에서는 question과 context paragraph를 받는다. BERT 처럼 pre-training 할 때 2개의 segment를 임의로 선택하고 concat한 후 permutation input으로 사용한다. input 값은 BERT처럼 [CLS, A, SEP, B, SEP]으로 구성된다. 그러나 BERT와는 달리 XLNet-Large에서는 NSP는 사용하지 않는데, 일정한 성능 향상을 보이지 않았기 때문이고 이는 NSP가 너무 쉬운 task이기 때문이라고 말한다.
+
+### Relative Segment Encodings
+segment를 구분해주기 위해 절대적이 값을 segment embedding으로 사용하는 BERT와는 다르게, transformer-XL의 relative encoding을 통해 segment encoding을 하려한다.
+
+sequence 안에 있는 두 토큰의 위치 $i, j$에 대해, $i, j$가 같은 segment에 속하는 토큰이라면 $s_{ij}=s_+$ 아니면 $s_{ij}=s_-$를 segment encoding 값으로 사용한다. 여기서 $s_+, s_-$는 각 어텐션 head에서 학습가능한 parameter이다. 즉, 여기서는 2개의 토큰이 어떤 특정한 segment에서 왔는지가 아니라 2개의 토큰이 동일한 segment에서 왔는지 판단한다. 이는 토큰의 위치 간에 관계만 모델링하는 relative encoding의 핵심적인 아이디어이다. 
+
+$i$에 대해 $j$를 처리할 때, segment encoding $s_{ij}$는 어텐션 weight $a_{ij}=(q_i+b)^Ts_{ij}$을 계산하는 데 사용된다. 여기서 $q_i$는 어텐션의 Q(Query) 벡터이고, $b$는 학습 가능한 head-specific한 bias 벡터이다. 최종적으로, $a_{ij}$는 어텐션 weight(어텐션 score에 softmax를 취해 구한 확률 값)에 더해진다.
+
+이렇게 relative segment embedding을 이용했을 때, 두 가지의 이점이 있다. 첫째, relative encoding의 inductive bias가 generalization을 향상시킨다. 둘째, absolute segment encoding에서는 불가능했던 2개 이상의 input segment를 받는 task에 대해서도 fine-tuning 할 수 있다는 가능성을 열어준다.
+
+### Discussion
+1. Comparison with BERT
+    
+    BERT와 XLNet은 둘 다 특정 sequence에 대해 일부 토큰을 예측하는 식으로 동작한다.
+    
+    예를 들어, [New, York, is, a, city] 라는 sequence가 있을 때, [New, York] 이 2개가 target 토큰이고 $log\space p$(New York | is a city)를 maximize 해야하는 상황이라고 가정해보자. 그리고 XLNet의 factorization order는 [is, a, city, New, York]이라고 가정하자. 이때, BERT와 XLNet 각각의 objective를 다음과 같이 나타낼 수 있다.
+    
+    ![5](../blogImage/7-5.png)
+    
+    중요한 건 BERT에서는 target(New와 York) 간에 dependency를 잡아낼 수 없지만 XLNet에서는 factorization order에 따라 가능하다는 점이다.
+    
+2. Comparison with LM
+    
+    GPT같은 AR LM들은 이전에 나오는 토큰들에 대한 dependency만 고려한다는 문제점이 있다.
+    
+    ELMo같은 경우 양방향을 고려하도록 설계되었지만 shallow한 방식을 사용하기 때문에 양방향 간의 deep intercation을 학습하기 어렵다.
+
+## Experiments
+
+### Pretraining and Implementation
+가장 큰 모델인 XLNet-Large는 BERT-Large와 동일한 hyperparameter를 사용했고 따라서 모델 사이즈도 비슷하다. pre-training 동안 항상 최대 sequence length(512)를 사용했다.
+
+XLNet-Large는 512 TPU v3 환경에서 2.5일 동안 약 500K step을 돌며 학습되었다. Batch size는 2048이고 Linear learning rate decay를 적용한 Adam optimizer를 사용했다. 확실히 학습 데이터 양에 비해 많은 학습을 하지 않은 것을 알 수 있다. 실제로 저자도 모델이 학습 데이터에 대해 underfit 하지만 학습(pre-training)을 더 하더라도 downstream task에 대해서는 크게 도움이 되지 않았다고 얘기하고 있으며, 모델이 데이터 스케일을 충분히 leverage하지 못하는 것을 원인으로 추측하고 있지만, 모델이 너무 커지면 fine-tuning에서의 실용성이 떨어지기 때문에 더 크기를 키우지는 않았다고 말한다.
+
+### Ablation Study
+다음 3가지 측면에서 ablation study를 진행했다.
+
+1. permutation language modeling objective의 효과. BERT의 denoising AE objective와 비교해서.
+2. transformer-XL을 기반 아키텍쳐로 선택하는 것의 중요성
+3. span-based prediction, bidirectional input pipeline, NSP의 필요성
+
+![6](../blogImage/7-6.png)
+
+6종류의 XLNet-Base의 variants(row 3-8), BERT-Base(row 1), denoising AE objective로 pre-training되고 bidirectional input pipeline을 갖는 transformer-XL(row 2) 이렇게 총 8가지를 비교했다. 모든 모델은 같은 hyperparameter, 같은 데이터로 pre-train 되었고, 12-layer 구조를 갖는다.
+
+row 1-4에서 transformer-XL과 permutation LM 기반의 XLNet이 성능이 좋다는 것을 알 수 있다.
+
+memory caching mechanism을 이용하지 않았을 때(row 5), 성능이 떨어지는 걸 볼 수 있었고, 특히 sequence의 길이가 가장 긴 RACE에서 성능이 가장 많이 감소한 것을 볼 수 있다. 
+
+span-based prediction과 bidirectional input pipeline이 XLNet의 성능에 중요한 역할을 했다는 것도 알 수 있다.(row 6-7)
+
+row 8의 결과를 봤을 때, NSP가 항상 성능을 높여주는 것 만은 아니었다. 따라서 XLNet에서는 pre-training 시 NSP objective를 제외했다.
+
+## Conclusion
+XLNet은 AR과 AE의 장점을 결합하기 위해 permutation language modeling objective를 사용한 generalized AR pre-trained 모델이다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

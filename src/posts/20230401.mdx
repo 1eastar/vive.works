@@ -1,0 +1,195 @@
+---
+id: "20230401"
+slug: "/20230401"
+title: "Dense Passage Retrieval for Open-Domain Question Answering"
+description: ""
+author: "Vive Kang"
+date: "2023-04-01"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+
+[https://arxiv.org/pdf/2004.04906.pdf](https://arxiv.org/pdf/2004.04906.pdf)
+
+## Motivation & Introduction
+
+open-domain QA에서 Retrieval은 일반적으로 TF-IDF 또는 BM25를 이용해 만들어졌다. 여기서는 inverted index를 사용하고 question과 context를 고차원의 sparse vector로 표현한다. sparse encoding과는 반대로 semantic한 dense encoding은 서로 다른 토큰일지라도 유사한 의미라면 가까이에 위치할 수 있다. 예를 들어, "Who is the bad guy in lord of the rings?" 이라는 질문과, "Sala Baker is best known for portraying the villain Sauron in the Lord of the Rings trilogy." 라는 context가 있을 때, term-based system 에서는 이 context를 retrieve하기 힘들지만 dense retrieval system에서는 "bad guy"와 "villain"의 유사함을 알 수 있어 해당 context를 retrieve 할 수 있다. dense encoding은 또한 학습도 가능하다. 
+
+그러나, 좋은 dense vector representation을 학습시키려면 많은 양의 labeled question, context가 필요하다. 그래서 여태 TF-IDF/BM25 방식보다 성능이 좋지 못했다가 최근 ORQA가 BM25의 성능을 넘어서는데 성공했다. 하지만 2가지의 취약한 부분이 있었는데, (1) ICT pre-training이 비용이 많이 들고, ICT 특성상 일반적인 문장을 통해 학습하는데 이 문장들이 일반적인 question과 형식이 달라서 unclear 하다는 점, (2) context encoder가 Q-A 쌍을 통해 학습하는 것이 아니라서 최선의 방식이 아니라는 점이다.
+
+이 논문에서는 위 문제점들에 대해 다룬다. 핵심은 "dense embedding model을 추가적인 pre-training 없이 Question-passage(or answer) 쌍으로만 더 잘 학습시킬 수 있을까?" 이다. 
+
+이 논문의 contribution은 (1) 적절히 training된 세팅에서 단순히 question encoder와 passage encoder를 fine-tuning하는 것 만으로 BM25를 넘어서기 충분하다는 점, (2) open-domain QA에서 retrieval의 precision이 높다는 뜻은 end-to-end QA의 정확도가 높다는 뜻과 같다는 걸 증명했다.
+
+## Dense Passage Retriever (DPR)
+
+retrieval component의 성능을 높이는데 집중한다. 
+
+### Overview
+
+dense passage retriever(DPR)은 dense encoder $E_P()$를 사용하는데, 이 인코더는 text passage를 d차원의 real-valued vector로 표현하고, 모든 $M$개의 passage에 대해 index를 만든다. run-time에서 DPR은 input question을 d차원으로 매핑하는 또 다른 인코더 $E_Q()$를 이용하고, $k$개의 이 질문과 관련있는 passage를 찾는다. 여기서 질문과 passage의 유사도는 dot-product로 구한다.
+
+$$
+sim(q,p)=E_Q(q)^{\top}E_P(p)
+$$
+
+cosine similarity와 L2 distance 같은 decomposable similarity function을 사용하지 않고 inner product를 사용한 것은, inner product가 나머지 둘과 거의 유사한 성능을 보였기 때문이라고 한다.
+
+**Encoder**
+
+![0](../blogImage/18-0.png)
+
+question encoder와 passage encoder는 아무 NN으로 구성해도 상관없지만, 논문에서는 각각 BERT로 구현하고 [CLS] 토큰의 output을 이용했다. 
+
+**Inference**
+
+FAISS 라이브러리를 이용해 passage encoder $E_P$를 모든 passage에 적용하고 인덱싱한다.
+
+run-time에는, question $q$가 있을 때 question의 embedding $v_q=E_Q(q)$를 구하고 이 값과 가장 가까운 embedding을 갖는 top $k$ passage를 retrieve 한다.
+
+## Training
+
+관련있는 question과 passage가 가까운 공간에 위치하는 vector space를 만드는 게 목표이다. 
+
+각$\mathcal{D}=\{<q_i,p_i^+,p_{i,1}^-,...,p_{i,n}^->\}_{i=1}^m$ 이라는 $m$개의 instance로 구성된 training data가 있을 때, 각 instance는 하나의 question $q_i$와 하나의 질문과 연관된 passage $p_i^+$, 나머지 $n$개의 질문과 관련없는 passage $p_{i,j}^-$가 있다. 여기서 positive passage에 대한 negative log likelihood를 최소화하도록 학습시킨다.
+
+![1](../blogImage/18-1.png)
+
+**Positive and negative passages**
+
+하나의 질문에 대해 positive passage는 소수이고 나머지 대다수의 passage는 negative이다. 따라서 이 negative passage를 적절히 잘 선택하는 것도 성능에 영향을 미친다. 논문에서는 3가지의 negative passage를 선택하는 방법을 고려한다.
+
+1. Random - corpus 내의 임의의 passage들을 negative passage로 이용한다.
+2. BM25 - 정답은 포함하지 않지만 질문의 토큰과 많이 겹치는 passage를 negative passage로 이용한다.
+3. Gold - 다른 질문의 positive passage를 negative passage로 이용한다.
+
+뒤에서 언급할 거지만 결과만 말하자면 최고의 모델은 같은 mini-batch 안에 있는 Gold passage를 negative passage로 이용하고 추가로 한개의 BM25 negative passage를 이용하는 방법이다.
+
+**In-batch negatives**
+
+![2](../blogImage/18-2.png)
+
+$B$개의 mini-batch question들이 있고 위와 같이 각 d차원 embedding 값으로 S matrix를 구한다. matrix S에서 색칠된 부분의 값을 구할 때 사용하는 ($q_i,p_i$) 쌍이 positive passage 관계이고 그 외의 흰색 부분은 negative passage 관계를 갖는다. S matrix의 연산 결과를 재사용하게 되면서 연산 비용도 줄일 수 있다. 
+
+## Experimental Setup
+
+다음의 dataset을 사용했다.
+
+- pre-processed Wikipedia
+- Natural Questions(NQ)
+- TriviaQA
+- WebQuestions
+- CuratedTREC
+- SQuAD v1.1
+
+![3](../blogImage/18-3.png)
+
+**Selection of positive passages**
+
+TREC, WebQuestions, TriviaQA에는 Q-A쌍만 제공되기 때문에, BM25를 이용해 가장 높은 rank의 passage를 사용했다. 100개 passage 안에 답이 없는 경우 그 질문은 제외시켰다. 
+
+For SQuAD and Natural Questions, since the original passages have been split and processed differently than our pool of candidate passages, we match and replace each gold passage with the corresponding passage in the candidate pool.
+
+## Experiments: Passage Retrieval
+
+DPR은 in-batch negative(bsz=128)를 기반으로 1개의 BM25 negativa passage씩 추가해서 학습시켰다. question encoder, passage encoder는 large dataset(NQ, TriviaQA, SQuAD)로 40 epoch, small dataset(TREC, WQ)로 100 epoch씩 학습시켰다.
+
+모든 데이터셋(SQuAD 제외)을 학습시키는 multi training도 했다. 
+
+BM25 + DPR은 ranking function으로 두가지를 합쳐서 사용하는 방식인데, $BM25(q,p) + \lambda \cdot sim(q,p)$에서 $\lambda=1.1$로 rank를 매겼다.
+
+### Main Results
+
+![4](../blogImage/18-4.png)
+
+위 표는 여러 다른 passage retrieval system을 5개의 dataset에 대해 비교한 것이다. SQuAD를 제외한 모든 dataset에서 DPR이 BM25보다 성능이 더 좋았다. k가 작을 수록 성능 차이가 컸다. multi dataset retriever는 데이터 양이 가장 적은 TREC에서 성능이 가장 많이 향상되었다.
+
+SQuAD에서 성능이 낮은 이유를 다음 2가지로 추측한다.
+
+1. annotator가 passage를 보고 question을 만들었기 때문에 lexical overlap 수준이 높고 따라서 BM25에 더 이점이 있다.
+2. Wikipedia에서 500개 정도의 글에서 데이터를 만들었기 때문에 training example들이 편향되어 있다.
+
+### Ablation Study on Model Training
+
+training option들이 각자 결과에 얼마나 영향을 미치는 지 알아보려 한다.
+
+**Sample efficiency**
+
+좋은 성능의 passage retriever를 만드는데 training example이 얼마나 필요한지 알아보았다. 
+
+![5](../blogImage/18-5.png)
+
+1000개의 example만을 사용해 DPR을 학습시켰을 때 이미 BM25의 성능을 넘어섰다. 
+
+This suggests that with a general pretrained language model, it is possible to train a high-quality dense retriever with a small number of question–passage pairs
+
+**In-batch negative training**
+
+![6](../blogImage/18-6.png)
+
+- **TOP block**
+ top-5일 때는 negative passage를 선택하는 방법인 Random, BM25, Gold에 따라 성능 차이가 많이 나지만, $k\ge20$ 일 때는 성능에 별 차이가 없다는 걸 알 수 있다.
+- **Middle block**
+TOP block의 마지막 Gold과 Middle block의 첫번째 Gold의 차이는 In-batch negative를 사용했다는 점이다. negative passage를 새로 만들기보다 batch 안에 이미 계산되어 있는 걸 재사용하는 방식이기 때문에 훨씬 효율적이고, 더 많은 training example pair를 만들어낼 수 있기 때문에 좋은 성능을 보이는 것이라고 한다. 
+이런 in-batch negative의 이점을 볼 때 batch size(#N)가 늘어났을 때, 성능이 증가하는 건 충분히 납득이 된다.
+- **BOTTOM block**
+Gold passage에 additional "hard" negative passage(answer string은 포함하지 않으면서 가장 높은 BM25 점수를 갖는 passage)를 추가하는 방식을 이용했다. 이 negative passage는 한 batch 안에서 모든 질문에 공통적으로 사용되었다. 결과적으로 하나의 additional "hard" negative passage를 추가하는 게 성능이 도움이 되었고, 2개까지 추가하는 건 그렇게 도움이 되지 않았다.
+
+**Impact of gold passages**
+
+![7](../blogImage/18-7.png)
+
+NQ dataset에서 distant supervised passage(정답을 포함하는 highest-ranked BM25 passage)를 positive로 사용하도록 했을 때 성능이 얼마나 감소하는지 알아보려 했다. 대략 1 point 감소했고 생각보다 영향이 없었다. 
+
+**Similarity and loss**
+
+dot-product 뿐만 아니라 cosine과 Euclidean L2 distance도 흔히 사용되는 decomposable similarity function이다. dot-product(DP)와 L2는 cosine보다는 뛰어났고 이 둘은 거의 비슷했다. 
+
+![8](../blogImage/18-8.png)
+
+**Cross-dataset generalization**
+
+discriminative training한 DPR이 fine-tuning 없이 다른 dataset에 바로 적용되어도 generalize를 잘 하는지 궁금했다. 확인하기 위해 NQ만으로 DPR을 학습시키고 작은 dataset인 WQ, TREC으로 테스트했다. DPR은 generalize를 잘 했는, fine-tuning된 모델의 best performance보다 3-5 point 정도의 성능 차이만 보였다. 
+
+### Qualitative Analysis
+
+![9](../blogImage/18-9.png)
+
+일반적으로 BM25 보다 DPR의 성능이 좋았지만 이 둘에서 retrieve된 passage는 달랐다. BM25는 드물게 나오는 핵심 phrase를 잘 파악하지만 lexical variation이나 semantic relationship을 잘 파악하지 못했고, DPR은 그 반대였다. 위 표의 첫번째 question에서 BM25를 통해 얻은 passage는 정답과 관련이 없었고, DPR의 passage는 적절한 passage를 찾아 냈다. 두번째 question은 그 반대이다.
+
+## Experiments: Question Answering
+
+다른 passage retriever가 최종 QA에 얼마나 영향을 미치는지 확인하려 한다.
+
+### End-to-end QA System
+
+end-to-end QA system으로 retriever + reader 구조를 이용한다. $k$개(최대 100개)의 retrieved passage에 대해 passage selection score를 매긴다. 그리고 각 passage에서 answer span을 뽑아서 span score를 매긴다. 가장 높은 passage selection score를 가진 passage에서의 best span을 최종 정답으로 선택한다. 
+
+학습할 때, top-100 retrieved passage에서 1개의 positive passage와 $m-1$개의 negative passage를 사용했다($m$은 hyperparameter, 논문에서는 24). positive passage에 있는 모든 answer span으 marginal log-likelihood와 선택된 positive passage의 log-likelihood를 결합해 최대화하도록 학습시킨다. large dataset(NQ, TriviaQA, SQuAQ)는 16 batch size, small datset(TREC, WQ)에는 4 batch size를 사용했다. 
+
+### Results
+
+![10](../blogImage/18-10.png)
+
+- retriever의 성능이 좋으면 일반적으로 최종 QA task의 성능도 더 좋아진다(예외적으로 SQuAD에서는 앞서 말한 2가지 bias가 있기 때문에).
+- large dataset(NQ, TriviaQA)에 대해 모델을 single dataset만을 이용해 학습했을 때랑 multi dataset을 이용해 학습했을 때 거의 비슷한 성능을 보였다.
+- 반대로, 작은 dataset에서는 multi dataset을 이용해 학습 했을 때 확실한 이점이 있었다.
+- DPR-based model은 5개 dataset 중에 4개에서 기존의 sota 결과보다 더 좋은 결과를 냈다.
+- ORQA, REALM은 target training set이 적은 경우(WQ, TREC)에만 DPR보다 성능이 좋았다.
+    - ORQA와 REALM은 추가적인 pre-training task(retriever pre-training)을 갖는다.
+    - 따라서, 이 additional pre-training task는 target training set이 작을 때에만 효과가 있다.
+    - multi training을 했을 땐 WQ, TREC에서도 sota를 달성했다.
+
+논문에서 소개한 retriever를 reader와 따로 학습하는 방식과 joint learning 방식을 비교해보았는데, retriever와 reader를 따로 학습시키는 전략이 성능이 더 뛰어났고 디자인도 더 단순했다.
+
+## Conclusion
+
+open-domain QA에서 기존의 sparse retriever보다 dense retriever가 성능이 더 뛰어나다는 것을 보였다. dual-encoder를 이용하는 방식이 잘 동작하는데 positive/negative passage나 in-batch negatives같은 요인들이 기여를 했다.
+
+analysis와 ablation에서 보였듯 모델와 similarity function이 더 복잡하다고 해서 좋은 성능을 내는 건 아니었다. 
+
+결과적으로 여러 개의 open-domain QA benchmark에서 sota를 달성했다.
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

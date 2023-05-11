@@ -1,0 +1,207 @@
+---
+id: "20230331"
+slug: "/20230331"
+title: "REALM: Retrieval-Augmented Language Model Pre-training"
+description: ""
+author: "Vive Kang"
+date: "2023-03-31"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+[https://arxiv.org/pdf/2002.08909.pdf](https://arxiv.org/pdf/2002.08909.pdf)
+
+## Motivation & Introduction
+
+기존의 BERT, RoBERTa, T5 같은 LM들은 world knowledge를 parameter에 implicit하게 저장한다. 이 때문에 어떤 knowledge가 학습되어있고 어디에 저장되어 있는지 파악하기 어렵다. 그리고 저장 공간 또한 network의 사이즈에 제약을 받아서, 더 많은 knowledge를 학습/저장하고 싶다면 더 큰 network가 기본적으로 필요하다.
+
+따라서 새로운 프레임워크 Retrieval-Augmented Language Model(REALM) pre-training을 제안한다. 다른 모델들은 knowledge들을 parameter를 통해 저장했지만, 여기서는 모델이 어떤 knowledge를 retrieve 할지 직접 결정하게 해서 knowledge를 explicitly하게 드러낸다. 예측을 하기 전에 retriever에서 필요한 내용을 찾고 이 내용을 바탕으로 예측을 한다. 이 모델을 retriever까지 end-to-end로 학습시키기 위해 retrieval 단계까지 backpropagation을 한다.
+
+![0](../blogImage/17-0.png)
+
+retriever는 수백만개 이상되는 document를 매번 고려해야하기 때문에, retriever를 포함해서 pre-training하는 건 연산 비용 측면에서 굉장히 어려운 일이다. 그리고 심지어 retriever까지 backpropagation도 해야한다. 따라서 Maximum Inner Product Search(MIPS) 알고리즘을 통해 TOP-k개의 relevance score가 높은 document만을 사용한다.
+
+- MIPS
+    
+    TOP-k 개의 질문과 유사한 document를 사용하는 것이 전체 document를 사용하는 것과 거의 approximate하다.
+    
+
+이전까지는 retriever를 학습시키지 않고 특정 방법을 이용해 document를 추려내게끔 만들었고 이를 기존 network의 앞에 더해주는 방식이었는데, REALM에서는 retriever까지 기존 network와 함께 학습시키고 특정 downstream task를 위해 fine-tuning 할 수 있게끔 설계되었다.
+
+## Approach
+
+### REALM’s generative process
+
+pre-training과 fine-tuning 둘 다 input $x$를 입력받아서 가능한 $y$에 대해 $p(y|x)$의 분포를 학습한다. pre-training에서는 masked language modeling task를 수행한다. 여기서 $x$는 마스킹된 sentence, $y$는 마스킹된 토큰의 원래 값이다. fine-tuning에서는 Open-QA task를 수행한다. $x$는 질문이고 $y$는 정답이다.
+
+REALM에서는 $p(y|x)$를 구하기 위해 2단계로 분리한다. retrieve and predict. input $x$가 입력될 때, knowledge corpus $Z$에서 질문에 도움이 될 document $z$를 찾는다(  $p(z|x)$ ). 이후 $z,x$를 둘 다 이용해 $y$를 예측한다( $p(y|z,x)$ ). 따라서 전체 과정을 다음과 같이 나타낼 수 있다. 
+
+$$
+p(y|x) = \sum_{z\in Z}p(y|z,x)p(z|x)
+$$
+
+### Model archiecture
+
+앞서 말한 2단계의 component들에 대해 설명하려 한다.
+
+$p(z|x)$ - **neural knowledge retriever**
+
+$p(y|z,x)$ - **knowledge-augmented encoder**
+
+**neural knowledge retriever**
+
+![1](../blogImage/17-1.png)
+
+![2](../blogImage/17-2.png)
+
+$f(x,z)$는 $x$와 $z$의 relevance score이고, retrieval distribution( $p(z|x)$ )은 모든 relevance score에 softmax를 취한 값이다.
+
+$Embed$ 값을 구할 때, BERT-style transformer를 따른다. wordpiece tokenization을 하고 시작 부분엔 [CLS], 각 input을 구분할 땐 [SEP] 토큰을 이용한다.
+
+![3](../blogImage/17-3.png)
+
+이렇게 구한 BERT-style input sequence 값을 Transformer를 거쳐 최종 [CLS] 토큰으로부터 만들어진 output vector를 $BERT_{CLS}(join_{BERT}(x))$라고 한다. 그 이후에 차원을 줄여주기 위한 projection matrix $W$를 거쳐서 각 embedding을 구한다. 정리하면 다음과 같다.
+
+![4](../blogImage/17-4.png)
+
+$z_{title}, z_{body}$는 각각 document의 제목, 내용에 해당한다.
+
+**Knowledge-Augmented Encoder**
+
+![5](../blogImage/17-5.png)
+
+이 단계에서는 pre-training과 fine-tuning에 사용하는 아키텍쳐가 다르다.
+
+pre-training의 masked language modeling에서는 $x$내의 [MASK] 토큰 값을 예측한다. 
+
+![6](../blogImage/17-6.png)
+
+$BERT_{MASK(j)}$는 j번째 Transformer output vector를 뜻한다(retriever에서 사용한 것과 다른 Transformer). $J_x$는 총 마스킹된 토큰 수이다.
+
+Open-QA fine-tuning에서는 정답 $y$를 예측한다. reading comprehension처럼 정답 span이 document $z$에 포함되어 있다고 가정한다. $S(z,y)$를 $z$안에서 정답 $y$에 매치되는 span의 집합이라고 할 때, 각 $s$의 start 토큰과 end 토큰을 이용해 값을 구한다.
+
+![7](../blogImage/17-7.png)
+
+### Training
+
+pre-training과 fine-tuning 시에 둘 다 log-likelihood $log\space p(y|x)$를 최대화하도록 학습시키고, SGD를 이용한다.
+
+연산 비용 측면에서 핵심적인 문제는 $p(y|x)$를 한번 구할 때마다 모든 document $Z$를 고려해야 한다는 점이다. 따라서 $p(z|x)$를 구할 때 가능성이 높은 top-k document만 이용해 approximate하도록 했는데, 사실 $Z$에 있는 대부분의 document들이 질문과 연관있을 가능성이 0에 가깝기 때문에 굉장히 합리적인 방법이다.
+
+top-k개의 document를 선택할 때, Maximum Inner Product Search(MIPS)를 통해 그 순위를 정한다. relevance score $f(x,z)=Embed_{input}(x)^{\top} Embed_{doc}(z)$를 이용한다. MIPS를 적용하기 위해 모든 document $z \in Z$에 대해 $Embed_{doc}(z)$을 미리 계산해둔다. 그리고 이 embedding에 대한 search index도 만든다. 그러나 $Embed_{doc}$의 parameter가 업데이트 되면 결과값도 수정되기 때문에 점차 쓸 수 없는 값으로 바뀌어 간다. 
+
+이에 대한 해결책으로 수백 단위의 training step마다 re-embedding과 re-indexing을 하게끔 했다(refresh). refresh 사이에서는 정확히 업데이트된 값이 아니지만 top-k document를 뽑을 때만 사용하는 값이기 때문에 크게 문제 없다고 말한다. 
+
+**Implementing asynchronous MIPS refreshes**
+
+2개의 job을 병렬적으로 수행하면서 MIPS의 index를 refresh 한다.
+
+- primary "**trainer**" job - parameter update
+- secondary "**index builder**" job - document embedding & indexing
+
+![8](../blogImage/17-8.png)
+
+trainer는 parameter $\theta'$를 index builder에게 보낸다. index builder가 받은 parameter $\theta'$를 이용해 새로운 index를 만드는 동안 trainer는 계속 학습을 진행한다. index builder의 작업이 끝나면 새로운 index를 trainer에게 보내고 trainer는 새로운 index를 이용해 학습한다. 이 과정에 계속 반복된다.
+
+이 asynchronous refresh 과정은 pre-training과 fine-tuning 둘 다 사용할 수 있지만, 논문에서는 pre-training 동안만 사용했다(pre-training 만으로도 충분히 좋은 $Embed_{doc}$ 함수를 만들어냈기 때문이다. fine-tuning 때도 사용한다면 더 좋은 성능을 낼 수도 있다).
+
+**What does the retriever learn?**
+
+![9](../blogImage/17-9.png)
+
+각 document $z$에 대해서 위 gradient는 $r(z)$를 이용해 retriever의 score $f(x,z)$를 업데이트 시킨다. 여기서 $p(y|z,x)$는 앞서 설명한 document $z$에서 정답 $y$를 예측할 확률이고, $p(y|x)$는 document를 랜덤 샘플링 했을 때의 값이다. $p(y|z,x) > p(y|x)$인 경우 positive로 학습한다.
+
+### Injecting inductive biases into pre-training
+
+REALM을 만드는 과정에서 모델이 더 잘 retrieve 하도록 하는 여러 전략들을 찾았다.
+
+**Salient span masking**
+
+pre-training 동안 마스킹된 토큰을 통해 world knowledge를 학습시키는데 초점을 두었다. 그러나 몇몇 "to", "of" 같은 토큰은 local context 만으로도 예측이 되기 때문에 "salient span(주목할만한 span)"에만 마스킹하도록 했다. BERT-base tagger를 이용해 name entity를 찾고, 정규표현식으로 날짜 토큰들을 찾아냈다. 이 salient span들 중에서 마스킹을 실시하도록 했다.
+
+**Null document**
+
+salient span masking을 고려하더라도 모든 마스킹된 토큰이 document retrieval이 필요한 건 아니다. 따라서 top-k document 중에 null document(∅)를 추가해준다.
+
+**Prohibiting trivial retrievals**
+
+pre-training 할 때, masked sequence $x$가 document $z$로부터 만들어졌다면 knowledge-augmented encoder는 $z$ 안에 있는 $x$의 원본 문장을 그대로 보고 예측을 하게 된다. 그 결과 $p(z|x)$가 큰 positive gradient를 갖게 되고 이게 반복되면 $x$와 $z$ 사이의 exact string match를 찾는 쪽으로 학습될 것이다. 이런 이유로 pre-training 시에 input과 일치하는 candidate는 제외시킨다.
+
+**Initialization**
+
+학습을 처음 시작할 때 retriever의 $Embed_{input}(x), Embed_{doc}(z)$가 완전 엉뚱하게 initialize 된다면, input $x$와 별 관련 없는 document $z$가 retrieve될 것이다. 이는 knowledge augmented encoder가 점차 retriever를 무시하도록 학습할 것이고 따라서 이 악순환은 계속된다.
+
+이 cold-start 문제를 해결하기 위해, Inverse Cloze Task(ICT)라는 training objective로 학습시킨 $Embed_{input}, Embed_{doc}$ 를 이용해 warm-start한다.
+
+- Inverse Cloze Task(ICT)
+    
+    sentence가 주어졌을 때, sentence가 어느 document에서 왔는지 찾도록 학습시키는 모델
+    
+
+knowledge-augmented encoder에서는 BERT의 pre-training으로 warm-start한다.
+
+## Experiments
+
+### Open-QA Benchmarks
+
+여러 Open-QA benchmark들이 있는데, 논문에서는 question writer가 정답을 모르는 dataset만 사용해서 더 현실적인 information-seeking 과정이 되도록 했다. 모든 predicted answer는 exact match로 평가했다. 다음의 benchmark를 사용했다.
+
+- NaturalQuestions-Open
+- WebQuestions
+- CuratedTrec
+
+### Approaches compared
+
+**Retrieval-based Open-QA**
+
+기존 대다수의 Open-QA system은 질문이 주어지면 knowledge corpus로부터 relevant document를 찾고 reading comprehension system을 이용해 document에서 정답을 찾아낸다. 그리고 학습시키지 않은 retriever를 사용한다. 이 패러다임에서는 knowledge가 corpus에 explicitly하게 저장되어 있다.
+
+**Generation-based Open-QA**
+
+Open-QA의 새로운 접근법으로 sequence prediction task로 여기는 방법이 있다. 단순히 질문을 인코딩해서 정답을 token-by-token으로 디코딩하는 방식이다. 그러나 이 방식은 아직 성능이 좋지 않다. 
+
+이후 T5가 context로부터 explicit extraction 없이 정답을 바로 만들어내는 게 실현 가능한 방식이라는 걸 보여줬다. 따라서 Open-QA에 fine-tuning된 T5 Base, Large, Large-11B를 이용해서 비교해보았다.
+
+### Main results
+
+![10](../blogImage/17-10.png)
+
+여러 접근법들을 3개의 Open-QA dataset을 이용해 비교했다. REALM은 이전의 모든 접근법들보다 상당히 성능이 좋았다. 
+
+generative Open-QA based T5가 생각보다 성능이 굉장히 좋았다. T5-11B는 기존 best보다 더 성능이 좋았다. T5의 사이즈가 커질수록 성능이 분명 좋아지긴 하지만 상당한 연상 비용이 든다. 그러나 REALM은 T5-11B보다 30배 이상 사이즈가 작으면서 성능은 더 좋았다. 
+
+REALM에도 T5처럼 pre-training 때 SQuAD같은 추가적인 reading comprehension data를 사용하는 게 성능에 도움이 되지만, 논문에서는 사용하지 않았다.
+
+REALM과 ORQA의 다른 점은 단순히 더 나은 pre-training 방법을 사용했다는 점이다. 그리고 맨 마지막 Ours 2개를 보면 논문에서 소개한 pre-training 방법이 single corpus setting (X = Wikipedia, Z = Wikipedia)과 separate-corpus setting(X = CC-News, Z = Wikipedia) 둘 다에 적용 가능하다는 걸 의미한다. 
+
+다른 retrieval-based system은 20-80개의 document를 retrieval하기도 하는데, REALM에는 5개의 document만 retrieving하는데도 최고의 성능을 보였다.
+
+## Analysis
+
+![11](../blogImage/17-11.png)
+
+위 표는 NaturalQuestions-Open에 대한 추가적인 테스트 결과이다. Exact match 결과와 함께 fine-tuning을 적용하기 전에 정답이 top-5 document에 있는 비율도 측정했다. 이 두번째 지표에서 retriver의 성능에 어떤 점이 기여를 많이 하는지 더 정확히 알 수 있다.
+
+**Encoder or Retriever**
+
+REALM의 pre-training을 통해 retriever와 encoder 둘 다 성능상의 이점을 받을 수 있었다.
+
+**Masking scheme**
+
+salient span masking과 (1) random token masking(in BERT), (2) random span masking(in SpanBERT) 을 비교했다. 위 table 2에서 그 결과를 볼 수 있듯 salient span masking REALM이 성능이 가장 좋았다.
+
+![12](../blogImage/17-12.png)
+
+**MIPS index refresh rate**
+
+pre-training 동안 corpus document를 re-embed하고 MIPS index를 rebuild하는 과정을 병렬적으로 수행한다. 대략 500 training step 당 한 번의 index refresh를 진행하는데, 30배 느리게 15000 step일 때와 비교해보았다. table 2에서의 결과는 stale index가 모델이 학습하는데 안 좋은 영향을 미친다는 걸 알 수 있다.
+
+**Examples of retrieved documents**
+
+![13](../blogImage/17-13.png)
+
+마스킹 토큰을 예측할 때, REALM이 BERT보다 성능이 좋았고 retriever를 이용한 REALM이 그보다 성능이 훨씬 좋았다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

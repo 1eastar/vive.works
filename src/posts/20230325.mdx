@@ -1,0 +1,224 @@
+---
+id: "20230325"
+slug: "/20230325"
+title: "SQuAD: 100,000+ Questions for Machine Comprehension of Text"
+description: ""
+author: "Vive Kang"
+date: "2023-03-25"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+기존의 Reading Comprehension(RC)를 위한 dataset들은 퀄리티와 양 2가지를 동시에 충족시키지 못했다. 따라서 Stanford Question Answering Dataset (SQuAD)를 제안한다. SQuAD의 답들은 모두 reading passage 내의 span(segment of text)으로 구성된다.
+
+passage에서 가능한 모든 span을 고려해야 하기 때문에, 꽤 많은 양의 후보를 평가할 수 있는 과정도 필요하다. 그러나 passage 내의 span으로 답을 정하기 때문에 정답을 평가하기가 쉽다는 장점이 있다.
+
+저자가 사용한 best model은 SQuAD에서 51.0%의 F1 score를 얻었고, 단순히 sliding window baseline 모델로 평가했을 땐 20%가 나왔다. 그리고 사람이 직접 했을 땐 86.8%가 나왔는데, 이는 SQuAD를 이용한 모델링, 학습에 발전의 여지가 있다는 걸 의미한다.
+
+## Existing Datasets
+
+![0](../blogImage/14-0.png)
+
+Overview of existing datasets
+
+**Reading Comprehension (RC)**
+
+- Hirschman의 논문에서 소개된 데이터 - 600개의 실제 3-6학년들의 reading comprehension 문제
+- MCTest - 660개의 story가 있고 각 story 당 질문 4개씩, 각 질문은 4지선다 형식
+- Algebra word problems
+- BAbI
+- Clark and Etzioni (2016) - 4학년 과학 시험문제로 world knowledge를 추론
+
+**Open-domain question answering**
+
+open-domain QA는 특정 domain이 정해져있지 않은 넓은 범위의 document들에서 질문에 답하는 게 목표이다. open-domain QA인 WikiQA는 SQuAD와 wikipedia를 사용한다는 점에서 비슷하지만, WikiQA는 span이 아닌 문장을 답으로 선택한다는 점에서 다르다.
+
+span을 선택하는 방식(SQuAD)은 open-domain QA의 마지막 단계인 *answer extraction*과 비슷한데, answer extraction은 여러 document에서 답을 찾아낼 수 있고 SQuAD는 single passage만 이용한다는 차이가 있다.
+
+**Cloze datasets**
+
+cloze dataset은 passage 내에서 missing word(주로 named entity)를 찾는 게 목표이다. 그 특성상 엄청 많은 양의 데이터가 있다.
+
+CBT는 앞선 20문장을 보고 21번째 문장의 빈칸 단어를 예측한다. 
+
+Hermann et al. (2015) 논문에서 소개한 dataset은 CNN/DN 기사의 abstractive summary(re-phrase summary)에서 빈칸 단어(entity)를 찾는다.
+
+SQuAD와 cloze-style query의 차이점은 cloze query는 single word(entity)가 정답이고 SQuAD는 non-entity이고 span을 정답으로 가질 수 있다는 점이다. 또 다른 차이점으로, SQuAD의 정답은 대부분 passage에 명시적으로 언급되어 있지만, cloze query의 정답은 passage에 명시적으로 언급되어 있지 않을 수도 있어서 추론이 필요할 수 있다.
+
+## Dataset Collection
+
+다음 3가지 단계를 거쳐 dataset을 모았다.
+
+1. **curating passages**
+다양한 주제의 wikipedia 기사에서 개별 paragraph를 나눠서 선별했다.
+2. **crowdsourcing question-answers on those passages**
+Amazon Mechanical Turk의 crowdworker들이 직접 paragraph를 보고 그에 대한 질문과 답변을 만들었다.
+3. **obtaining additional answers**
+그렇게 생성된 QA에서 질문만 보여주고 다시 정답을 찾게 했다. 최소 2개 이상의 정답을 더 구했다. 이로써 정확도를 높이고 새로운 QA 쌍을 찾아낼 수 있어서 데이터 양을 늘리는 데도 도움이 됐다.
+
+## Dataset Analysis
+
+SQuAD의 특징을 알아보기 위해 QA set을 분석했다.
+
+1. **Diversity in answers**
+답변을 분류하는데, 먼저 숫자와 숫자가 아닌 답변을 구분한다. 숫자가 아닌 답변은 품사로 구분되고 명사같은 경우 사람, 장소 등 entity에 따라 또 분류한다.
+    
+![1](../blogImage/14-1.png)
+    
+2. **Reasoning required to answer question**
+질문들을 아래의 5가지 reasoning 카테고리로 분류했다. 한 질문은 여러 카테고리로 분류될 수 있다.
+    
+![2](../blogImage/14-2.png)
+    
+    그 결과, 질문과 답변 사이에는 어느정도의 lexical/syntactic한 차이가 있다는 걸 알 수 있다(따라서 어느 수준의 reasoning이 필요하다).
+    
+3. **Stratification by syntactic divergence**
+질문과 정답을 포함하고 있는 문장 간에 syntactic 차이를 측정했다. 이 값으로 질문의 난이도를 측정하고 dataset을 분류할 수 있었다.
+    
+![3](../blogImage/14-3.png)
+    
+    word-lemma 쌍이 질문과 정답 문장에서 동일하게 나타나는 anchor를 찾는다. 위 예제에서는 "first"가 해당한다. 그리고 dependency parse tree로 부터 2개의 unlexicalized path를 찾아내는데, 질문에서 anchor인 "first"부터 "what"까지의 path와 정답 문장에서 anchor인 "first"부터 "Bainbridge’s"까지의 path이다.
+    
+    - **dependency parse tree**
+        
+        A dependency parse tree is a type of syntactic parse tree that represents the grammatical relationships between words in a sentence. In a dependency parse tree, each word in the sentence is represented as a node, and the relationships between words are represented as directed arcs between nodes.
+        
+        These arcs indicate the grammatical dependencies between words, such as subject-verb or modifier-noun relationships. For example, in the sentence "John likes pizza," the word "likes" would have an incoming arc from "John" to indicate that "John" is the subject of the verb "likes."
+        
+        Dependency parse trees can be useful for natural language processing tasks such as question answering, text summarization, and machine translation, as they provide a structured representation of the meaning and structure of a sentence.
+        
+        In the passage, the authors use dependency parse trees to extract unlexicalized paths from the question and answer sentences to measure the syntactic divergence between them.
+        
+    - **unlexicalized path**
+        
+        An unlexicalized path is a sequence of grammatical relationships between words in a sentence that does not include specific word forms or lexical information.
+        
+    
+    그 후, 두 path 간의 edit distance를 구하는데, edit distance란 하나의 path를 다른 path와 똑같이 만드는 데 필요한 수정 횟수이다(deletion, insertion만 가능. 위 예시는 4). 모든 anchor에 대해 이 값을 구하고 그 최소값을 syntactic divergence라고 정의했다. 
+    
+    ![4](../blogImage/14-4.png)
+    
+    (a)는 syntactic divergence에 따른 문장 비율, (b)는 edit distance가 0인 문장 예시, (c)는 6인 문장의 예시이다.
+    
+
+## Methods
+
+logistic regression 모델을 만들고 3가지 baseline과 정확도를 비교해봤다.
+
+**Candidate answer generation**
+문장 내 모든 가능한 span을 정답 후보로 두지 않고, constituency parse tree 내의 constituent span들만 정답 후보로 사용했다. 실제 정답이 constituent가 아닐 경우, 실제 정답을 포함하는 가장 짧은 constituent를 target으로 삼았다.
+
+- **constituency parse tree**
+    
+    A constituency parse is a type of syntactic parse tree that represents the grammatical structure of a sentence in terms of its constituents, or substructures.
+    
+    In a constituency parse tree, each word in the sentence is represented as a leaf node, and the tree is constructed by grouping words together into larger constituents, such as noun phrases, verb phrases, and clauses. The relationships between these constituents are represented as parent-child relationships between nodes in the tree.
+    
+    For example, in the sentence "The cat sat on the mat," a constituency parse tree might represent the sentence as a noun phrase ("The cat") and a verb phrase ("sat on the mat"), with the verb phrase further divided into a verb ("sat") and a prepositional phrase ("on the mat").
+    
+    여기서 noun phrase "The cat", verb phrase "sat on the mat"을 각각 **constituent**라고 부를 수 있다.
+    
+    **constituency parse vs. dependency parse**
+    [https://www.baeldung.com/cs/constituency-vs-dependency-parsing](https://www.baeldung.com/cs/constituency-vs-dependency-parsing)
+    
+
+### Sliding Window Baseline
+
+정답 후보 각각에 대해, 자신(후보)을 포함하는 문장과 질문 간의 unigram/bigram overlap을 계산한다. 그 후에 가장 높은 값을 갖는 후보 중에서 sliding-window approach를 통해 하나로 추려낸다.
+
+sliding window에 distance-based extension(정답 후보에 가까이 있을수록 높은 점수를 매기는 방식)도 함께 사용한 접근법도 사용했다.
+
+- unigram/bigram overlap
+    
+    정답 후보를 포함하는 문장과 질문 사이의 유사도를 구하기 위한 지표이다.
+    
+    예를 들어, "Who wrote The Catcher in the Rye?" 라는 질문이 있고, "The Catcher in the Rye is a novel by J.D. Salinger."라는 정답 후보를 포함한 문장이 있을 때 unigram/bigram overlap은 다음과 같다. (너무 많아서 "The Catcher in the Rye"는 제외했다)
+    
+    Unigrams: {"is", "a", "novel", "by", "J.D.", "Salinger."}
+    Bigrams: {("is", "a"), ("a", "novel"), ("novel", "by"), ("by", "J.D."), ("J.D.", "Salinger.")}
+    
+
+- sliding-window approach
+    
+    window size $K$를 기준으로 후보를 포함한 문장을 sliding해가며 질문과 몇 개의 단어가 겹치는 지 계산한다. 모든 후보에 대해 계산한 후, 가장 높은 점수의 window가 있는 후보가 최종 후보가 된다.
+    
+
+### Logistic Regression
+
+![4](../blogImage/14-4.png)
+
+logistic regression model은 각 후보 답변에 대해 여러 유형의 feature들을 추출한다. 그 중 대부분이 lexicalized feature, dependency tree path feature 이다. 전체 feature group에 대한 설명은 위 표에 나와있다. 각 feature에 대한 설명은 다음과 같다. (한글로 번역해서 표현하기 쉽지 않아서 원문 내용 그대로 옮김)
+
+**Matching Word Frequencies**, **Matching Bigram Frequencies**, **Root Match** 3가지 feature는 모델이 올바른 정답을 선택할 수 있도록 돕는다.
+
+**Length features** bias the model towards picking common lengths and positions for answer spans, while **span word frequencies** bias the model against uninformative words
+
+**Constituent label** and **span POS tag** features guide the model towards the correct answer types.
+
+In addition to these basic features, we resolve lexical variation using **lexicalized** features, and syntactic variation using **dependency tree path** features.
+
+모델은 multi-class log-likelihood loss를 최소화하도록 학습시킨다. Adaptive Gradient Algorithm(Adagrad), $L_2$ regularization를 이용한다.
+
+- Adaptive Gradient Algorithm(Adagrad)
+    
+    feature마다 중요도, 크기 등이 제각각이기 때문에 모든 feature에 동일한 learning rate를 적용하는 것은 비효율적이다. AdaGrad는 feature별로 learning rate를 Adaptive하게, 즉 다르게 조절하는 것이다.
+    
+    [https://heytech.tistory.com/383](https://heytech.tistory.com/383)
+    
+- L2 regularization
+    
+    ![5](../blogImage/14-5.png)
+    
+    모델의 특정 weight가 커질 경우 overfitting 될 수 있기 때문에, 기존의 cost function 에 weight의 제곱을 더함으로써 weight가 너무 크지 않은 방향으로 학습되게 한다. 이를 Weight decay 라고도 한다. (L1 regularization은 weight의 제곱이 아닌 weight만 더한다)
+    
+
+## Experiments
+
+### Model Evaluation
+
+- **Exact math**
+전체 질문에 대해 실제 정답들 중 하나와 예측 값이 정확히 일치한 비율(%)
+- **(Macro-averaged)F1 score**
+예측 값과 실제 값 사이의 평균적인 overlap을 측정하는 지표. 한 질문에 대한 여러 정답들 중에 maximum F1 값을 구하고, 전체 질문들의 평균 F1을 구한다.
+
+### Human Performance
+
+SQuAD 데이터를 구하는 과정에서 설명했듯, 각 질문은 최소 3개의 정답을 갖고 있다. 그 중에서 두번째 정답을 human prediction으로 여겼다.
+
+EM에서 77.0%, F1 에서 86.8%를 얻었다. 이 차이는 정답을 근본적으로 더 틀린 게 아니라, 불필요한 phrase들을 추가/배제하면서 발생했다.
+
+### Model Performance
+
+![6](../blogImage/14-6.png)
+
+Logistic Regression 모델은 baseline들보다는 성능이 좋았지만 사람에게는 한참 못 미친다.
+
+**Feature Ablations**
+
+Logistic regression에서 어떤 feature가 성능에 얼마나 영향을 미치는지 알아보기 위해 하나씩 제거해보며 테스트해봤다. 
+
+![7](../blogImage/14-7.png)
+
+lexicalized feature와 dependency tree path feature가 가장 성능이 많은 영향을 끼쳤다. 그리고 lexicalized feature를 사용했을 때 training data에 상당히 overfitting 되었다.
+
+**Performance stratified by answer type**
+
+![8](../blogImage/14-8.png)
+
+후보가 많지 않고 대부분의 정답이 single token으로 구성된 Date, Other Numeric에서 좋은 성능을 보였다. 후보가 많은 Person, Location, Other Entity에서는 좀 더 성능이 낮았지만 그래도 품사 feature를 사용하기에 꽤 괜찮았다. 그 외 나머지 부분은 성능이 별로 좋지 않았는데, 이 부분들이 전체 데이터의 47.6%를 차지한다.
+
+**Performance stratified by syntactic divergence**
+
+![9](../blogImage/14-9.png)
+
+Logistic Regression에서는 질문과 정답이 포함된 문장 간의 syntactic divergence가 클수록 성능이 낮았다. 흥미로운 점은, 사람은 딱히 syntactic divergence에 영향을 받지 않았다는 점이다. 문장 구조의 표면적인 차이가 이해하는 데 별로 영향을 주지 않았다. 따라서 사람과의 차이를 측정해서 모델이 얼마나 일반화를 잘 하고 있는지 평가하는 데 사용할 수 있을 것이다.
+
+## Conclusion
+
+SQuAD는 다양한 영역의 질문들과 여러가지 답변 타입을 가진 것이 특징이다. SQuAD를 이용한 logistic regression 모델이 사람에 한참 못 미치고 그 차이를 좁히기 쉽지 않아 보이지만, 그 과정에서 reading comprehension에 상당한 발전이 있을 거라 예상한다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

@@ -1,0 +1,159 @@
+---
+id: "20230410"
+slug: "/20230410"
+title: "(COMET-)ATOMIC 2020: On Symbolic and Neural Commonsense Knowledge Graphs"
+description: ""
+author: "Vive Kang"
+date: "2023-04-10"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+large LM이 발전하면서 점점 downstream task에서의 성능도 함께 좋아지고 있다. 이런 성능상의 이점은 fact들을 parameter를 통해 기억함으로써 얻어낼 수 있었다고 여기며, 따라서 LM을 knowledge base로 여기는 새로운 패러다임이 등장했다. 이 새로운 패러다임의 성공적인 모습을 통해 모델이 충분히 commonsense knowledge를 인코딩할 수 있으며 structured knowledge resource가 더 이상 불필요하다고 여겼다.
+
+그러나 저자들은 이 점에 대해 회의적인 시각으로 바라본다 - LM의 스케일을 키운다고 실제로 commonsense knowledge를 더 배울 수 있을까?. LM은 특정 knowledge를 분명 잘 표현하긴 했지만, 모델에서의 최고의 결과는 디테일한 특정 조건 하에서 관찰되었다.
+
+knowledge graph tuple로 LM을 학습 했을 때 commonsense benchmark에서 promising result를 보여주었다. 여기에서 영감을 받아 논문에서는 knowledge bases를 2가지 방식으로 활용할 것을 제안한다. (1) 직접 knowledge에 접근할 수 있는 static graph, (2) LM에 commonsense knowledge를 학습시키기 위한 resource.
+
+(2)번에서 commonsense knowledge resource가 pre-trained LM에 가져다 준 추가 information에 대해 평가한다. 이에 1.33M개의 commonsense knowledge tuples, 23개의 commonsense relation을 가진 knowledge graph ATOMIC2020을 만들었다. 
+
+실험 결과로 기존의 다른 commonsense knowledge resource들에 비해 ATOMIC2020이 더 정확하고 더 다양한 종류의 commonsense knowledge를 갖고 있다는 걸 보여준다. 또, 실험 결과를 통해 다양한 KG들이 있지만 각 resource들은 자신만의 specific domain이나 구조를 갖기 때문에 다양한 domain에 대한 general commonsense knowledge를 얻기는 어렵다는 걸 보여준다.
+
+추가적으로 COMET에 대해서도 실험을 진행했다. 그 결과 (1) KG를 학습시킨 LM이 naive LM보다 더 knowledge를 정확하게 표현하는 법을 배웠다. (2)ATOMIC2020을 transfer resource로 사용한 COMET 모델이 다른 seed LM들보다 큰 성능 향상을 보였다.
+
+**Key Contributions**
+
+1. social, physical, eventive aspect를 포함하는 commonsense knowledge graph인 ATOMIC2020을 제안한다.
+2. ATOMIC2020과 기존 다른 CSKB들을 비교했을 때 우리의 *symbolic* knowledge graph(ATOMIC2020)가 가장 성능이 좋았다.
+3. ATOMIC2020의 declarative한 knowledge를 transfer한 새로운 *neural* knowledge model인 COMET-ATOMIC2020을 만들었다. 이 모델은 GPT-3보다 400배 적은 parameter만을 이용해 더 좋은 성능을 보였다.
+
+ 
+
+## ATOMIC2020
+
+ATOMIC2020은 1.33M개의 everyday inferential knowledge tuples로 구성된 commonsense knowledge graph이고, LM에 인코딩되어 있는 commonsense knowledge를 보충해줄 목적으로 만들어졌다.
+
+크게 3가지 categorical type으로 분류할 수 있다. (1) 9 commonsense relations of social interaction, (2) 7 physical-entity commonsense relations, (3) 7 event-centered commonsense relations.
+
+총 23개의 relation은 오른쪽 표에 나와 있다.
+
+![0](../blogImage/23-0.png)
+
+physical과 event-centered commonsense에서 2개의 가장 큰 새로운 relation인 "ObjectUse"와 "HinderedBy"를 이용한다. "ObjectUse"는 everyday object-use pair를 뜻하는데, "holding popcorn"에서 사용되는 "popcorn bucket"이 있다(위 표의 예시에서는 "bread ObjectUse make french toast"). "HinderedBy"는 real world의 event들이 방해받을 수 있다는 점에 주목한다. 예를 들어, "X’s desires to adopt a cat may be **hindered by** finding out that X is allergic to cats"가 있다.
+
+object-use pair를 모을 때, crowdworker에게 창의적이고 그럴듯한 object의 usage를 만들어 달라고 했다. 예를 들어, "popcorn bucket"같은 경우 코스튬 파티에서 모자로 쓸 수 있을 것이다. "HinderedBy"를 모을 때는 crowdworker에게 ATOMIC2020의 event들에 대해서 achievable goal을 방해하는(막는) 상황 또는 event를 만들어 달라고 했다. 
+ConceptNet의 3.4M개의 영어 tuple 중 172K개의 tuple을 선별해서 ATOMIC2020에 추가했다. 
+
+## Symbolic Knowledge Graph Comparison
+
+ATOMIC2020과 3가지 다른 CSKG(ATOMIC, ConceptNet, TransOMCS)를 accuracy of tuple에 대해 비교해보려 한다.
+
+### Accuracy Assessment
+
+각 KG마다 3000개의 random instance를 뽑아서 crowdworker에게 tuple의 accuracy를 측정하게 했다. 
+
+**Qualifying Crowdsource  Workers**
+
+high-quality annotation을 얻기 위해 worker를 테스트를 통해 qualify한 후 고용했다.
+
+**Human Evaluation Setup**
+
+worker들에게 knowledge tuple을 (head, relation, tail) 형태로 보여주었다. 평가 속도를 높이기 위해 relation(e.g. AtLocation)을 인간 친화적인 자연어(e.g. located at)로 바꿔주었다. worker에게는 다음 4가지 중에 선택하게 했다. 
+
+1. always/often - knowledge assertion이 항상 또는 종종 참인지
+2. sometimes/likely -  sometimes 또는 likely 참인지
+3. farfetched/never - farfetched(터무니 없는)하거나 거짓인지
+4. invalid - invalid하거나 이해가 안 됨
+
+1, 2번으로 선택된 tuple은 ACCEPT, 3, 4번으로 선택된 tuple은 REJECT. 생소한 내용이어서 공정한 평가가 안 될 것 같을 때는 NO JUDGEMENT.
+
+**Results**
+
+![1](../blogImage/23-1.png)
+
+![2](../blogImage/23-2.png)
+
+Table 2의 데이터(KG accuracy)를 relation 별로 분리한 값
+
+### Coverage Assessment
+
+CSKG간에 pairwise comparison을 해서 commonsense knowledge에 대한 coverage를 평가하려 한다. 비교의 신뢰도를 높이기 위해, KG들 간의 relation과 tuple들을 매핑했다.
+
+**Mapping Relations**
+
+ATOMIC2020은 ATOMIC 기반으로 만들어졌기 때문에 ATOMIC2020과 ConceptNet 간의 매핑이 주요했다. 이 둘을 매핑할 땐, 직접 label의 정의를 기준으로 매핑해주었고, relation 당 20개의 랜덤 샘플링을 통해 verify 과정을 거쳤다.
+
+**Mapping Tuples**
+
+concept이 KG마다 다른 syntactic difference를 해결하기 위해 다음의 과정으로 head/tail concept을 전처리해줬다. (1) lowercase로 바꾸고 extra space, punctuations, stopwords를 제거했다. (2) 각 KB 안에 정확히 중복되는 tuple 제거. (3) content word들의 POS에 맞게 lemmatize.
+
+ATOMIC과 ATOMIC2020에서는 PersonX, PersonY, PersonZ가 문장 맨 앞에 오면 제거해주고 그 외의 다른 곳에서 나오면 "person"으로 바꿔주었다.
+
+**Metrics**
+
+- Coverage precision - target KG에 있는 tuple과 일치하는 source KG에서의 tuple의 비율
+- Coverage recall - source KG에 있는 tuple과 일치하는 target KG에서의 tuple의 비율
+
+**Results**
+
+![3](../blogImage/23-3.png)
+
+![4](../blogImage/23-4.png)
+
+ATOMIC2020이 widest coverage를 보인다. ATOMIC과 ConceptNet의 overlap이 작은 건 ATOMIC은 social behavior에 초점을 두고 ConceptNet은 physical commonsense에 초점을 두기 때문에 자연스러운 결과이다.
+
+## Neural Knowledge Graph Comparison
+
+LM은 knowledge를 표현하는 강력한 도구이지만 LM은 language distribution을 나타내도록 학습되기 때문에 generative knowledge bases로의 그 능력은 제한적이었다. 그러나 structured knowledge(graph)를 통해 재학습시킬 경우 LM이 transfer를 더 잘하게 되었다는 연구 결과가 있었고, 결과적으로 이제는 KG를 LM을 학습시키기 위해 사용한다.
+
+**Experimental Setup**
+
+KG가 LM을 일명 "knowledge model"로 transfer하는데 도움이 되는 지를 알아보기 위해, 여러 다른 pre-trained LM들을 KG로 학습시켜 보았다.
+
+- GPT2
+GPT2-XL을 각각의 CSKG에 대해 tail을 맞추도록 fine-tuning했다. zero-shot learning 세팅의 GPT2-XL을 baseline으로 삼았다.
+- BART-large
+- GPT-3
+GPT-3 API를 이용해 (head, relation) prefix pair로부터 tail을 생성하도록 했다. 따라서 few-shot setting을 사용했다.
+
+**Evaluation Setup**
+
+LM → knowledge model로의 transfer 능력을 평가하기 위해, LM이 new, unseen entity, concepts, event를 얼마나 잘 만들어 내는지 확인했다. 각 KG를 training, validation, test set으로 tuple의 head가 겹치지 않도록 나누었다. 이렇게 겹치지 않게 set을 나눔으로써 training할 때 봤던 특정 relation을 기억하는 것이 아니라 generalize하도록 학습시킬 수 있다. "I", "You" 같은 generic한 head가 validation 또는 test set에 포함되어 있으면 너무 많아지기 때문에 (validation, test set에 한해서) 하나의 head 당 최대 500개의 tuple에만 포함될 수 있도록 했다. 그리고 low-quality tuple을 제거하기 위해 TransOMCS에서는 confidence score 0.5 이상인 tuple만 포함시켰다.
+text generation에 대한 일반적인 metric인 BLEU, ROUGE, CIDEr, BERT score를 이용했다.
+
+**Results**
+
+![5](../blogImage/23-5.png)
+
+![6](../blogImage/23-6.png)
+
+fine-tuning 없는 zero-shot GPT2-XL와 COMET 모델을 ATOMIC2020, ATOMIC, ConceptNet으로 학습한 모델과 비교했을 때 상당히 큰 차이가 났다. 이는 pre-trained LM이 상당한 이점이 있음을 보여준다.
+
+Table 6에서 GPT-3가 430배 이상 parameter 수가 더 많음에도 불구하고 GPT-3에 대한 human evaluation은 COMET보다 최대 12% 낮다.
+
+두 가지 흥미로운 결과가 더 보였다.
+
+1. zero-shot model과 COMET 간의 차이가 KG로 ATOMIC2020과 ATOMIC을 사용했을 때 가장 컸다. ATOMIC이 pre-training동안 배우기 힘든 knowledge category를 사용하기 때문이라고 말한다.
+2. TransOMCS로 학습한 COMET 모델은 새로운 entity에 대한 knowledge를 generalize하지 못했다. 이는 LM이 정확한 knowledge example들로 부터만 이점을 얻을 수 있다는 걸 뜻한다.
+
+## Discussion
+
+**Do pretrained language models already encode commonsense knowledge?**
+
+Table 6에서 볼 수 있듯, LM은 zero-shot prompting할 때 large varieties of knowledge를 표현하는 데 실패했다. KG로 학습시킨 COMET으로 그 모델을 바꿨을 땐 성능이 엄청 상승했다. 결론적으로 LM은 commonsense knowledge를 직접 표현하지는 못하더라도 parameter 속에 인코딩하고는 있다.
+
+**What considerations should be made when designing commonsense knowledge resources?**
+
+특정 타입의 knowledge들은 이미 pre-trained LM에 인코딩되어서 포함되어 있기 때문에, CSKG를 만들 때 LM이 잘 알지 못할 것 같은 knowledge를 모아야 한다. 그리고 commonsense knowledge resources는 accuracy와 relationship coverage에 초점을 두고 설계되어야 한다. 그리고 TransOMCS의 예시에서 보듯이 퀄리티에 대한 검증도 필요하다.
+
+## Conclusion
+
+commonsense knowledge graph를 pre-trained LM에 대한 transfer learning의 도구로 사용하는 방식에 대해 설명했다. 그렇기 때문에 논문에서는 이제 commonsense knowledge graph가 기존 LM에서는 어려워서 표현하지 못했던 것들을 포함하고 있도록 설계되어야 한다고 말한다. 
+
+그 결과 새로운 commonsense knowledge graph인 ATOMIC2020을 소개한다. 연구를 통해 ATOMIC2020이 기존의 CSKG에는 없고 LM으로는 표현하기 힘들었던 high-accuracy knowledge tuples를 갖고 있다는 걸 보여주었다. 그리고 ATOMIC2020을 이용해 LM을 (high quality tuple을 생성할 수 있는)knowledge model로 transfer 할 수 있다고 말한다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

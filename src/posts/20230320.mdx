@@ -1,0 +1,185 @@
+---
+id: "20230320"
+slug: "/20230320"
+title: "ELECTRA: PRE-TRAINING TEXT ENCODERS AS DISCRIMINATORS RATHER THAN GENERATORS"
+description: ""
+author: "Vive Kang"
+date: "2023-03-20"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+masked language modeling에서 일반적으로 15%의 토큰을 마스킹하고 원래 토큰을 예측하는 데 전체 sequence를 사용한다. 이말은 곧 고작 15%를 학습하는 데 전체 데이터를 연산해야 한다는 것이다.
+
+따라서 논문에서는 "replaced token detection"이라는 pre-train task를 제안한다. 이 task를 통해 모델은 실제 input 토큰과 마스킹된 토큰을 예측한 결과 토큰을 구별하는 법을 학습한다. 여기서는 [MASK] 토큰을 이용해 마스킹하는 것이 아니라 다른 샘플링한 토큰으로 대체해서 기존의 [MASK] 토큰으로 인한 pretraining-finetuning 간 mismatch도 없앴다. 모든 토큰에 대해 original/replacement 인지 예측하는 discriminator로써의 network를 pre-train한다. 대조적으로, MLM에서는 기존 토큰을 예측하는 generator로써의 network를 pre-train한다. 
+
+이 방식의 장점은 모든 토큰을 학습하는 데 사용할 수 있다는 점이다.
+
+GAN의 discriminator와 유사하긴 한데, 정확히 말하면 ELECTRA는 GAN이 아니고 위의 방식은 adversarial 하지 않다. 
+
+- why?
+    
+    GANs는 결국 Generator와 Discriminator가 서로의 실수를 통해 학습하는 것이다. 즉, generator는 discriminator가 틀린 결과를 내게끔 하는 것이 objective이다.
+    
+    ![1](../blogImage/10-1.png)
+    
+    예를 들어, generator가 고양이 이미지를 만들어내고, discriminator가 이를 실제 이미지(true)라고 예측을 한다면 generator 입장에서는 좋은 이미지를 만들어 낸 것이므로 generator는 loss를 적게 받는다. 반대로 생성된 이미지인 게 걸린다면(discriminator가 잘 동작한다면) generator는 좋은 이미지를 만들어내지 못했으므로 큰 loss를 받게 된다.
+    
+    ![2](../blogImage/10-2.png)
+    
+    ELECTRA가 GAN이려면, MLM이 토큰을 예측해서 Fake sentence를 만들었을 때 ELECTRA가 이 fake 문장을 원본 문장(true)이라고 예측한다면, MLM 입장에서는 좋은 결과물을 냈기에 적은 loss를 받는 식으로 학습되어야 한다.
+    
+    근데 사실 MLM 입장에서는 원본 문장으로 정확히 복구하는 게 objective가 아니고, 문맥상 말이 되는 문장을 예측하면 된다. 정확히 동일한 토큰을 예측하지 못했더라도 비슷한 의미의 토큰을 예측했다면 비슷한 embedding 값을 가지기 때문에 꼭 원본을 예측하지 못해도 그 문맥상 의미가 비슷하다면 적은 loss를 받는다.
+    
+    따라서 MLM은 discriminator가 틀리도록 하는 것이 아닌 likelihood를 maximize 하도록 학습된다.
+    
+
+- GANs를 text에 적용하기 힘든 이유?
+    
+    generator가 토큰을 예측할 때 연속적인 확률 분포를 이용하는 것이 아니기 때문.
+    
+
+ELECTRA는 동일한 조건에서 BERT, XLNet 같은 MLM based 모델들 보다 훨씬 좋은 성능을 보인다.
+
+![3](../blogImage/10-3.png)
+
+요약하면, 실제 데이터와 가짜 데이터를 구분해내는 discriminative task는 연산량과 parameter 측면에서 기존의 generative 접근법보다 훨씬 효율적이다.
+
+## Method
+
+먼저 replaced token detection pre-training task에 대해 설명하려 한다.
+
+![4](../blogImage/10-4.png)
+
+두 개의 NN을 학습시킨다: generator $G$, discriminator $D$. 각각 encoder로 구성되며 input 토큰 $x=[x_1,...,x_n]$으로 output representation $h(x)=[h_1,...,h_n]$을 출력한다. generator는 특정 위치 $t$에서 특정한 토큰 $x_t$를 생성할 확률을 다음과 같이 표현한다.
+
+$$
+p_G(x_t|x)=\cfrac{exp(e(x_t)^Th_G(x)_t)}{\sum_{x^{'}} exp(e(x^{'})^Th_G(x)_t)}
+$$
+
+특정 위치 $t$에서 discriminator는 $x_t$ 토큰이 generator에서 생성된 토큰이 아니라 실제 토큰일 확률을 다음 식으로 구한다.
+
+$$
+D(x,t)=sigmoid(w^Th_D(x)_t)
+$$
+
+generator는 MLM을 통해 학습된다. input $x=[x_1,...,x_n]$이 있을 때, 임의의 위치 값 $m=[m_1,...,m_k]$에 대해 [MASK] 토큰으로 대체한다. 이렇게 생성된 sequence를 $x^{masked}=REPLACE(x,m,[MASK])$라고 하자. generator는 마스킹된 토큰을 예측하도록 학습된다.
+
+discriminator는 실제 토큰과 generator에서 예측을 통해 출력한 토큰을 구별하도록 학습된다. 좀 더 구체적으로 설명하면, generator에서는 training data로부터 가져온 generator sample들을 이용해 마스킹 토큰을 예측한다. generator에서 이 샘플들을 이용해 마스킹 토큰을 대체해서 corrupted seqeunce $x^{corrupt}$를 만들고, discriminator에서 $x^{corrupt}$의 각 토큰이 실제 input과 동일한지 예측하면서 학습된다. $x^{corrupt}$를 다음과 같이 표현할 수 있다.
+
+![5](../blogImage/10-5.png)
+
+그리고 generator와 discriminator의 loss function은 다음과 같이 표현된다.
+
+![6](../blogImage/10-6.png)
+
+GAN의 training objective와 비슷해보이지만, 몇 가지 주요한 차이가 있다.
+
+1. generator가 우연히 정확한 토큰을 예측한다면, 그 토큰은 실제 토큰으로(마스킹되지 않은 걸로) 여긴다. 이렇게 하는 게 downstream task에서의 성능을 어느정도 높여주었다고 한다.
+2. generator는 discriminator와 adversarial하게 학습되는 것이 라니라, likelihood를 maximize하는 방식으로 학습된다. generator를 adversarial하게 학습하는 건 어렵기 때문에, reinforcement learning을 이용해서 우회하여 generator를 학습시켜보았다. 결과적으로 reinforcement learning은 maximum-likelihood 방식보다 성능이 더 안 좋았다.
+3. GAN과는 다르게 generator의 input에 noise 처리를 하지 않았다.
+
+![7](../blogImage/10-7.png)
+
+앞서 설명한 2개의 loss function을 합친 loss function을 최소화하도록 학습한다. 여기서는 discriminator의 loss를 이용해 back-propagation을 하지 않는다(사실 샘플링하는 과정때문에 할 수 없는 것이다). pre-training을 한 후에, downstream task에 대해 discriminator만 fine-tuning한다. 
+
+## Experiments
+
+### Experimental Setup
+
+모든 pre-training과 evaluation data는 영어로 수행했다. multilingual data에 대해서는 추후에 연구하려고 한다.
+
+전체적인 구조와 대부분의 hyperparameter는 BERT와 동일하다. 몇몇 evaluation 데이터는 양이 적기 때문에 fine-tuned 모델의 정확도 값이 다양하게 나올 수 있다. 따라서 동일한 pre-training checkpoint로부터 fine-tuning을 10번을 해서 그 평균 값을 결과로 사용했다.
+
+### Model Extensions
+
+**Weight Sharing**
+
+pre-training 동안 generator와 discriminator에서 weight sharing을 할 경우 효율성을 높일 수 있다고 한다. generator와 discriminator의 사이즈가 같다면 모든 transformer weight를 동일하게 해주면 된다. 그러나 discriminator보다 generator의 사이즈를 더 작게 했을 때 성능이 좋다는 것을 발견했다. 따라서 embedding 값만 공유가 가능하다(정확히는 token embedding + positional embedding).
+
+token embedding을 공유해서 사용하는 것이 좋다고 생각하는데, MLM에서 이 embedding을 학습하는 게 더 효과적이기 때문이다. 즉, discriminator에서 token embedding을 별도로 학습을 하게 되면 discriminator의 input은 corrupted token을 예측해서 만든 output 값이기 때문에 dataset에는 있지만 discriminator는 알 수 없는 토큰들이 생기기 때문이다. 모든 encoder의 weight를 공유하면 어느정도 개선이 있긴 하겠지만 generator와 discriminator가 동일한 사이즈를 가져야 한다는 제약이 있다. 따라서 논문에서는 embedding만 공유하는 방식을 사용한다.
+
+**Smaller Generators**
+
+같은 사이즈의 generator와 discriminator를 사용하면 MLM만 사용한 모델보다 2배의 연산량이 필요하다. 이걸 줄이기 위해 작은 generator를 사용할 것을 제안한다. 논문에서는 구체적으로, 다른 hyperparameter 값들은 냅두고 layer 수를 줄였다. 
+
+![8](../blogImage/10-8.png)
+
+왼쪽 차트는 generator size가 discriminator size의 1/2-1/4 수준일 때 가장 좋은 성능을 보인다는 것을 알려준다. generator size가 너무 큰 경우 discriminator의 효율적인 학습을 방해했다.
+
+**Training Algorithms**
+
+다른 training algorithm들을 ELECTRA에 적용시켜 봤는데, 결론부터 말하자면 성능을 향상시키지 못했다. 기존의 방식은 generator와 discriminator의 loss funtion을 합친 형태의 loss function을 사용해 한번에 학습시킨다. 
+
+첫번째 방법으로, 다음 2-stage의 과정을 거쳐 학습시켜 보았다.
+
+1. generator만 n step 학습
+2. generator의 학습된 weight를 이용해 discriminator를 초기화하고 discriminator를 n step 학습. 학습 동안 generator는 같이 학습하지 않는다.
+
+두번째 방법으로, reinforcement learning을 이용해서 GAN처럼 adversarial하게 generator를 학습시켰다.
+
+이렇게 총 3가지 방법에 대해 비교한 것이 Figure 3의 오른쪽 차트이다. 그냥 기존 방식이 가장 성능이 좋았다. 
+
+GANs for text 방식으로 사용했을 때 다음 2가지 문제점이 있었다.
+
+1. adversarial generator 자체가 MLM task에서 정확도가 낮았다. 보통 65% 정도인데 여기서는 58%.
+2. adversarial하게 학습된 generator는 low-entropy output distribution을 생성한다. 즉, 확률 분포 내에서 하나의 토큰에 아주 큰 확률이 걸린다는 것이고 이는 그 다양성이 떨어진 다는 걸 뜻한다.
+
+### Small Models
+
+pre-training의 효율을 높이기 위해 빠르게 학습할 수 있는 작은 ELECTRA 모델을 만들어 비교했다. 
+
+![9](../blogImage/10-9.png)
+
+ELECTRA-base는 BERT-large(GLUE 84.0 score)보다 뛰어난 성능을 보였다.
+
+### Large Models
+
+ELECTRA-large를 만들어서 replaced token detection pre-training task가 큰 모델에서도 효과적인지 확인해보려 한다.
+
+![10](../blogImage/10-10.png)
+
+Result on GLUE
+
+![11](../blogImage/10-11.png)
+
+Result on SQuAD
+
+### Efficiency Analysis
+
+논문에서는 input 토큰들 중 일부만을 이용해 학습하는 방식이 MLM을 비효율적으로 만든다고 한다. 무엇때문에 ELECTRA가 성능상의 이점을 얻는지 알아내기 위해 BERT와 ELECTRA 중간쯤에 위치한 pre-training objective들을 이용해 비교해보았다. 
+
+- **ELECTRA 15%**
+기본적으로 ELECTRA와 동일한데, discriminator를 마스킹된 15%의 input 토큰에 대해서만 학습한다. 즉 discriminator loss의 합은 전체 토큰이 아닌 마스킹된 토큰에 대한 loss의 합이다.
+- **Replace MLM**
+MLM과 동일한데 [MASK] 토큰으로 대체하는 것이 아니라 generator sample 내 임의의 토큰으로 대체하는 것이다. [MASK] 토큰에 대한 pretraining-finetuning 간의 차이 문제를 해결했을 때 ELECTRA가 얼마나 개선될 수 있는지 알아보기 위함이다.
+- **All-Tokens MLM**
+Replace MLM처럼 [MASK] 토큰 대신 임의의 토큰으로 대체한다. 그리고 마스킹된 토큰 뿐만아니라 전체 토큰에 대해 예측한다.
+    - 전체 내용
+        
+![12](../blogImage/10-12.png)
+        
+
+![13](../blogImage/10-13.png)
+
+ELECTRA가 ELECTRA 15%보다 성능이 좋은 걸로 봐서 모든 input 토큰에 대해 학습하는 것이 더 좋다는 걸 알 수 있다. 
+
+Replaced MLM이 BERT보다 성능이 좋은 걸로 볼 때, [MASK] 토큰으로 인한 mismatch가 성능을 해친다는 점을 알 수 있다. 물론 BERT는 이 차이를 해소하기 위해 8:1:1 의 비율을 적용하지만 이걸로 불충분하다는 걸 보여 준다.
+
+All-Tokens MLM은 ELECTRA와 비슷한 성능을 냈는데, 이를 통해 모든 토큰을 이용해 학습하는 방법이 ELECTRA 성능 향상에 큰 기여를 한다는 걸 알 수 있다. 그리고 pretraining-finetuning mismatch를 해소한 것은 크게 기여를 하지 않았다는 것도 확인할 수 있다.
+
+![14](../blogImage/10-14.png)
+
+All-Tokens MLM에 비해 ELECTRA의 성능이 좋은 것은 ELECTRA가 단순히 학습속도가 빠르기 때문만은 아니다. 왼쪽 차트를 보면 모델 사이즈가 작을수록 ELECTRA의 이점이 더 커지는 것을 볼 수 있다. 그리고 오른쪽 차트를 보면 ELECTRA가 더 높은 downstream accuracy 를 보이는 걸 알 수 있다.
+
+각 위치의 토큰에 대해 가능한 토큰의 distribution을 구할 필요가 없기에(ELECTRA는 확률 분포를 구하는 것이 아니라 실제 토큰인지 아닌지만 판단하면 된다) ELECTRA가 BERT보다 parameter-efficient하다고 추측하지만, 사실 이 부분에 대해 확실히 말하기 위해선 연구가 더 필요하다.
+
+## Conclusion
+
+새로운 self-supervised task인 replaced token detection을 제안했다. 핵심 아이디어는 작은 generator network에서 생성된 고퀄리티의 샘플들을 실제 토큰 값과 구별하도록 학습시키는 것이다. MLM에 비해 이 objective는 연산이 더 효율적이고 downstream task에서 더 높은 성능을 낸다. 그리고 심지어 상대적으로 적은 양의 연산만을 수행해도 잘 동작한다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

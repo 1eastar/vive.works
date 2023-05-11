@@ -1,0 +1,224 @@
+---
+id: "20230328"
+slug: "/20230328"
+title: "Reading Wikipedia to Answer Open-Domain Questions"
+description: ""
+author: "Vive Kang"
+date: "2023-03-28"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+[https://arxiv.org/pdf/1704.00051.pdf](https://arxiv.org/pdf/1704.00051.pdf)
+
+### Background
+
+- **TF-IDF**
+    
+    Term Frequency-Inverse Document Frequency = TF * IDF
+    
+    TF(d, t): 문서 d에서 단어 t가 나온 횟수
+    
+    DF(t): 단어 t가 포함된 문서 수
+    
+    IDF = log(n / 1 + DF(t)), n: 문서의 총 개수
+    
+    TF-IDF는 모든 문서에서 자주 등장하는 단어는 중요도가 낮다고 판단하며, 특정 문서에서만 자주 등장하는 단어는 중요도가 높다고 판단합니다. TF-IDF 값이 낮으면 중요도가 낮은 것이며, TF-IDF 값이 크면 중요도가 큰 것입니다. 즉, the나 a와 같이 불용어의 경우에는 모든 문서에 자주 등장하기 마련이기 때문에 자연스럽게 불용어의 TF-IDF의 값은 다른 단어의 TF-IDF에 비해서 낮아지게 됩니다.
+    
+    [https://wikidocs.net/31698](https://wikidocs.net/31698)
+    
+- **distant supervision**
+    
+    [https://aclanthology.org/P09-1113.pdf](https://aclanthology.org/P09-1113.pdf)
+    
+    [https://sumim.tistory.com/entry/NLP-근본-논문-리뷰-2-Distant-Supervision-for-Relation-Extraction-without-Labeled-Data-ACL-2009](https://sumim.tistory.com/entry/NLP-%EA%B7%BC%EB%B3%B8-%EB%85%BC%EB%AC%B8-%EB%A6%AC%EB%B7%B0-2-Distant-Supervision-for-Relation-Extraction-without-Labeled-Data-ACL-2009)
+    
+
+## Motivation & Introduction
+
+Wikipedia를 단일 knowledge source로 사용하는 open-domain QA는 문제가 있다고 생각하는데, 예를 들어 백과사전 내에서 그 해답을 찾고자 할 때 문제가 된다. 질문에 답하기 위해서는 먼저 관련된 글 몇개를 뽑고 그 안에서 정답을 찾아나간다. 이 과정을 "*machine reading at scale*"(MRS)라고 부른다.
+
+논문에서 제안할 방식은 Wikipedia를 단순히 여러 글들의 collection으로 여기고 Wikipedia 자체의 graph structure에도 의존하지 않기 때문에, document, 책, 뉴스 등의 collection도 사용할 수 있는 generic한 특정을 갖고 있다. (따라서 Wikipedia 외에도 다른 dataset을 knowledge source로 사용할 수 있다.)
+
+중복적인 여러 데이터에 의존할 수 있는 multiple source 대신, 단일 knowledge source를 사용하게 되면 정답을 찾는 데 도움되는 관련 문장들이 적거나 아예 없을 수 있다. 따라서 그 적은 문장들을 정확히 이해하고 그로부터 추론할 수 있어야하는데, 여기서 시작해서 machine comprehension(text를 정확히 이해하는 것)이라는 subfield에 대한 연구가 진행되고 SQuAQ 같은 dataset도 만들어졌다. 그러나 SQuAD같은 machine comprehension source는 질문과 함께 그와 관련된 paragraph를 함께 입력하는데, 이건 실제 open-domain QA와는 거리가 좀 있다.
+
+논문에서는 Wikipedia를 knowledge source로 갖고 여러 QA dataset으로 학습시킨 DrQA(Document Retriever + Document Reader)를 개발했다. 그리고 multiple QA dataset을 이용해 open-domain system이 다양한 기존의 QA dataset에서 잘 동작하도록 함으로써, real-world 환경에서처럼 다양한 질문과 정보들에 대해 얼마나 일반화가 잘 되어있는지 평가한다.
+
+DrQA 구조
+
+- Document Retriever - bigram hashing + TF-IDF
+- Document Reader - multi-layer RNN
+
+## Our System: DrQA
+
+관련된 글을 찾는 **Document Retriever**와 소수의 document 들에서 정답을 찾아내는 **Document Reader**로 구성된다.
+
+### Document Retriever
+
+학습하지 않는 document retriever system을 사용했다. 먼저, inverted index와 term vector model을 이용해 점수를 매겼는데, 이 방식이 Wikipedia 자체 search API보다 성능이 좋았다. 
+
+- **inverted index**
+    
+    document마다 ID가 정해져 있고 각 단어들과 그 단어가 등장하는 document의 ID값 들을 매핑해두는 방식이다.
+    
+    ex. "all": [1,2,4] ⇒ 1,2,4번 document에 "all"이라는 단어가 등장한다.
+    
+- **term vector model**
+    
+    document와 query를 vector of term weight로 나타내는 기법이다. 
+    
+    먼저, 전체 document에 등장하는 단어의 collection을 모은다. 예를 들어, 다음 3문장이 있을 때,
+    
+    - Doc 1: "The quick brown fox jumps over the lazy dog"
+    - Doc 2: "A quick brown dog jumps over the lazy cat"
+    - Doc 3: "The lazy brown dog sleeps all day"
+    
+    collection은 ["all", "brown", "cat", "dog", "fox", "jumps", "lazy", "over", "quick", "sleeps", "the"] 이다. 
+    
+    그 후, document들을 각 단어의 frequency vector로 표현한다. 예를 들어, Doc 1은 (0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 2) 로 표현된다. 그리고 query는 각 단어의 weight vector로 표현한다. 여기서 weight가 낮은 단어는 query내에서 그 단어의 중요성이 낮다는 의미이다. query 내에서 각 단어의 weight는 TF-IDF를 이용해 구한다. 예를 들어, "lazy dog" 라는 query가 있을 때, 대략 (0, 0, 0, **1**, 0, 0, **0.2**, 0, 0, 0, 0) 이런 vector를 갖게 된다.
+    
+    term vector of document와 term vector of query가 얼마나 연관있는 지를 cosine similarity를 통해 계산했다. 여기서 높은 점수를 받은 document가 해당 query에 더 관련있는 document인 것이다.
+    
+    - cosine similarity
+        
+        cosine_similarity(u, v) = dot_product(u, v) / (norm(u) * norm(v))
+        
+
+또한, n-gram feature를 통해 local word order를 알 수 있게 해서 성능을 향상시켰다. 단어를 개별적으로 보는 게 아니라 순서도 어느정도 고려해주는 것이 성능을 높여주었다. 긴 n-gram을 사용할수록 연산에 대한 부담이 커지기 때문에, 어느정도의 단어 순서도 고려해주고 메모리 부담도 덜 줄 수 있는 2-gram을 이용했다.
+
+이 Document Retriever를 이용해서 한 질문에 대해 5개의 Wikipedia 글을 골라서 Document Reader로 넘겨주었다.
+
+### Document Reader
+
+$l$개의 토큰으로 구성된 질문 $q=\{q_1,...,q_l\}$가 있고 하나 이상의 document에 $n$개의 paragraph가 있고 하나의 paragraph $p$에 $m$개의 토큰이 있을 때 $\{p_1,...,p_m\}$, 각 paragraph마다 RNN 모델에 적용했다.
+
+**Paragraph encoding**
+
+모델의 input으로 사용하기 전에 먼저 paragraph $p$ 안의 모든 토큰 $p_i$를 feature vector $\tilde{p}_i$로 인코딩해주었다. 이 $\tilde{p}_i$를 multi-layer bi-directional LSTM을 이용해 토큰 $p_i$와 그 contextual information을 갖고 있는 최종 $P_i$로 만든다.
+
+여기서 $P_i$는 아래에 소개할 각 layer들의 출력 값을 concat한 벡터이다.
+
+- **Word embedding
+$f_{emb}(p_i)=E(p_i)$**
+    
+    300-dimensional GloVe embedding을 이용한다. 대다수의 pre-trained word embedding은 그대로 두고 질문에 가장 빈번하게 등장하는 1000개 단어를 fine-tuning했다. 이는 질문에 나타나는 "what", "how", "where" 등의 단어가 훨씬 중요하기 때문이다.
+    
+- **Exact match
+$f_{exact_match}(p_i)=I(p_i \in q)$**
+    
+    3가지 binary feature를 사용한다. 질문 $q$안에 단어 $p_i$와 정확히 같은 단어가 있는지를 체크하는데, $p_i$가 원본 형태일 때, lowercase일 때, lemma 형태일 때를 각각 feature로 갖는다.
+    
+- **Token features
+$f_{token}(p_i)=(POS(p_i),NER(p_i),TF(p_i))$**
+    
+    POS(part-of-speech), NER(named entity recognition) tag, TF(term frequency)를 feature로 사용한다.
+    
+- **Aligned question embedding
+$f_{align}(p_i)=\sum_ja_{i,j}E(p_i)$**
+    
+    $**a_{i,j}$는 $p_i$와 질문 $q$의 모든 단어 $q_i$의 유사도에 대한 attention score이다.**
+    
+    ![0](../blogImage/15-0.png)
+    
+    Exact match와 비교했을 때, car과 vehicle 처럼 유사하지만 다른 단어를 파악하는 데 도움을 준다.
+    
+
+**Question encoding**
+
+$q_i$의 word embedding 위에 RNN을 추가해서 $Q_i$를 만들고 single vector $\{Q_1,...,Q_l\} \rightarrow Q$로 합친다. 합치는 과정은, $Q=\sum_jb_jQ_j$ 이고, $b_j$는 아래와 같다.
+
+![1](../blogImage/15-1.png)
+
+**Prediction**
+
+각 paragraph 마다 span of tokens를 예측한다. paragraph vector $\{P_1,...,P_m\}$과 question vector $q$가 있을 때, 2개의 classifier를 학습시켜 각각 span 의 시작 토큰과 끝 토큰을 예측하게 한다. paragraph의 $i$번째 토큰이 시작/마지막 토큰일 확률은 다음과 같다.
+
+![2](../blogImage/15-2.png)
+
+이후 $P_{start}(i)\times P_{end}(i')$가 최대가 되는 span을 찾는다. ($i \le i' \le i+15)$
+
+모든 paragraph에 대해 위 과정을 거쳐 span을 구한 후, unnormalized exponential 후 argmax 값이 최종 예측 값이 된다.
+
+## Data
+
+3가지 타입의 데이터를 사용했다. 
+
+1. Wikipedia - 정답을 찾기 위한 knowledge source의 역할
+2. SQuAD - Document Reader를 학습시키는 역할
+3. CuratedTREC, WebQuestions, WikiMovies - Document Reader를 학습시키고, 논문에서 제안한 시스템의 open-domain QA 능력을 테스트하고, multitask learning과 distant supervision의 효과를 테스트하는 역할
+
+**Distantly Supervised Data**
+
+위에 언급한 모든 dataset은 training set은 갖고 있었지만 3번의 3개는 Q-A pair 뿐이어서 Document Reader의 training set으로 바로 사용할 수 없었다(SQuAD 처럼 paragraph가 필요하다). 따라서 다음의 과정을 통해 각 Q-A pair를 training data로 사용할 수 있게 했다.
+
+1. question에 대해 Document Retriever에서 top 5 wikipedia 글을 뽑아낸다.
+2. 글 5개의 paragraph 중에서 정답과 Exact match하지 않는 paragraph는 제외한다.
+3. 25개 이하 1500개 이상의 글자 수를 가진 paragraph는 제외한다.
+4. question에 named entity가 있다면, 해당 NE를 포함하지 않는 paragraph는 제외한다.
+5. 남은 paragraph들에 대해, 점수를 매겨서 상위 5개의 paragraph를 training data에 추가한다.
+    - exact match 정답이 paragraph에 있으면 점수를 부여한다.
+    - 질문과 paragraph의 20 token window의 unigram/bigram overlap에 따라 점수를 부여한다.
+6. 모든 paragraph에서 overlap이 발생하지 않는 경우 그 케이스는 버린다.
+
+![3](../blogImage/15-3.png)
+
+각 dataset에서 paragraph를 선택한 예시이다.
+
+SQuAD data로도 추가적으로 DS data를 만들어낼 수 있었는데, 정답이 언급된 또 다른 paragraph들을 찾아내는 방식을 이용했다. DS data의 절반이 (기존 paragraph가 속한 글이 아닌)다른 글의 paragraph에서 만들어졌다.
+
+![4](../blogImage/15-4.png)
+
+## Experiments
+
+먼저 Document Retriever, Document Reader 각각을 평가해보고, 합쳐서(DrQA) Wikipedia(main knowledge resource) 상에서 open-domain QA를 테스트해본다.
+
+### Finding Relevant Articles
+
+먼저 모든 QA dataset 상에서 Document Retriever의 성능을 확인했다.
+
+![5](../blogImage/15-5.png)
+
+Document Retriever로 5개의 글을 뽑았을 때 그 속에 정답과 관련된 span이 있는 비율(%)을 나타낸 표이다.
+
+Wikipedia search api보다 성능이 좋았고 특히 bigram hashing을 사용했을 때 더 좋았다.
+
+### **Reader Evaluation on SQuAD**
+
+![6](../blogImage/15-6.png)
+
+**ablation study**
+
+paragraph encoding 4가지 방법들이 성능이 미치는 영향을 테스트해보았다.
+
+![7](../blogImage/15-7.png)
+
+Aligned question embedding과 Exact match를 둘 다 없앴을 때 성능이 급격히 안 좋아졌는데, 서로 비슷한 역할을 하지만 상호보완적으로 동작한다는 걸 알 수 있었다.
+
+### Full Wikipedia Question Answering
+
+앞서 설명한 4가지 dataset(SQuAD, CuratedTREC, WebQuestions,WikiMovies)으로 DrQA를 평가했다. distant supervision과 multitask learning의 효과를 알아보기 위해 3가지 버전의 DrQA를 사용했다. 
+
+1. SQuAD로 pre-training
+2. SQuAD로 pre-training, 나머지 3개의 DS data를 각각 fine-tuning
+3. SQuAD와 나머지 3개의 DS data로 pre-training
+
+**Result**
+
+![8](../blogImage/15-8.png)
+
+SQuAD만 학습시킨 모델보다 여러 DS data로 Multitask learning을 한 모델이 성능이 더 좋았는데, 이는 task transfer가 발생한다는 걸 뜻한다. 그러나 task transfer가 성능 향상의 주요한 이유가 아니라고 보는데, 개별 dataset만을 이용한 fine-tuning 시에도 거의 비슷한 수준의 성능 향상을 보였기 때문이다. 
+
+table 4의 SQuAD에서 Document Reader만 사용했을 때 모델과 비교해보면, 69.5 → 27.1로 점수가 많이 떨어지는 걸 볼 수 있다. 특정 paragraph가 아닌 Wikipedia로부터 읽어내야하기 때문이다. 즉, SQuAD는 특정 paragraph를 고려해서 만들어졌기 때문에 paragraph 없이 Wikipedia로부터 정답을 찾아내려면 쉽지 않을 것이다.
+
+## Conclusion
+
+Wikipedia를 단일 knowledge source로 사용해서 MRS에 대해 연구했다. machine comprehension system 만으로는 전반적인 task를 해결할 수 없기에 MRS에 더 집중해야 한다고 말한다. 
+
+논문에서는 성능 좋은 system을 만들기 위해 search, DS, multitask learning을 전부 이용했다. 앞으로 DrQA에서 더 연구해야 할 점은,
+
+1. Document Reader가 paragraph들을 개별적으로 학습하던 방식에서 여러 paragraph나 document를 통합해서 학습하는 것
+2. Document Retriever와 Document Reader를 따로 학습하는 게 아니라 end-to-end로 한번에 학습시키는 것
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

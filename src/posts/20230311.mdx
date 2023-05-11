@@ -1,0 +1,163 @@
+---
+id: "20230311"
+slug: "/20230311"
+title: "BART : Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension"
+description: ""
+author: "Vive Kang"
+date: "2023-03-11"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+
+## Motivation & Introduction
+self-supervised한 방식은 다양한 NLP task를 처리하는데 많은 기여를 했고, 그 중 MLM을 다양하게 변환해서 이용하는 방식이 가장 좋은 성능을 보이고 있다. 하지만 이렇게 MLM을 변환하여 사용하는 방식들은 각자 자신의 target task를 처리하는 것에만 초점을 두고 있기에 그 한계가 명확하다.
+
+이 논문에서는, 다양한 task에 적용할 수 있는 seq2seq 구조의 denoising autoencoder인 BART를 소개한다.
+
+BART는 transformer의 encoder와 decoder를 둘 다 이용하는 모델이다.
+
+pre-training은 다음 2단계를 거친다. (1) noising function을 이용해 text에 임의의 noise를 가한다. (2) seq2seq 형태의 모델이 original input text를 출력하도록 한다.
+
+BART는 text generation task에 특히 효율적이고 이해가 필요한 task에도 좋은 성능을 보인다.
+
+## Model
+BART는 corrupted text를 original text로 복구시켜주는 denoising autoencoder이고, bidirectional encoder와 LTR autoregressive decoder를 갖는 seq2seq 구조를 갖는다.
+
+### Architecture
+BART는 ReLU 대신 **GELU**를 사용하는 것 빼고는 기본적인 transformer 아키텍쳐를 따른다. base 모델에서는 encoder, decoder 각각 6개의 layer를 사용하고, large 모델에서는 각각 12개씩 사용한다. 
+
+BART는 BERT의 아키텍쳐와 거의 유사하지만 다음의 차이가 있다.
+
+(1) 기본적인 transformer처럼 각 decoder에는 마지막 encoder의 output을 입력받는 cross attention layer(encoder-decoder attention layer)가 있다.
+
+(2) BERT에는 각 토큰에 대한 최종 output을 vocabulary에 대한 확률 값으로 변환해주는 FFN가 있지만, BART는 decoder를 포함하고 있기 때문에 없다.
+
+(3) BART는 BERT보다 총 parameter 수가 대략 10%정도 더 많다.
+
+### Pre-training BART
+BART는 먼저 text를 손상(corrupt)시키고 decoder의 output과 손상되기 전의 text 사이의 차이를 최소화하도록 학습한다. 기존의 특정 형태의 noising만을 이용하는 denoising autoencoder들과는 다르게, BART는 어떤 종류의 text 손상을 가해도 된다.
+
+다음은 저자가 사용한 transformation들이다. 다음의 5가지 방법을 한번에 사용해서 학습한 게 아니라 각각 적용한 BART를 만들었고 가장 좋은 noise 방법을 찾는 것이 BART가 하고자 하는 방법이었다.
+
+![figure 1](../blogImage/4-figure1.png)
+
+**Token Masking**
+
+임의의 토큰을 선택하여 [MASK] 토큰으로 대체한다. BERT과 동일.
+
+**Token Deletion**
+
+임의의 토큰을 input sequence에서 없앤다. 모델은 어느 자리의 토큰이 삭제되었는지 예측한다.
+
+**Text Infilling**
+
+$\lambda=3$인 포아송 분포(평균 = 분산 = $\lambda$)로부터 span length를 얻고, 그만큼의 text 구간을 하나의 [MASK] 토큰으로 바꿔준다. span length 가 0일 경우에는 [MASK] 토큰을 하나 추가한다. 모델은 [MASK] 토큰이 원래 몇 개의 토큰이었는지를 예측하고 학습한다.
+
+**Sentence Permutation**
+
+input document를 마침표(.)를 기준으로 sentences로 나누고, 이 sentences를 임의의 순서로 섞는다. 모델은 원래의 순서로 다시 재배열하도록 학습된다.
+
+**Document Rotation**
+
+document에서 임의의 토큰을 그 토큰을 시작점으로 두고 하나의 토큰씩 맨 뒤로 가며 회전한다. 이 task는 모델에게 document의 시작이 어디인지를 학습시킨다.
+
+이 중 3번째인 Text Infilling이 가장 성능이 좋았고, RoBERTa와도 성능이 거의 비슷했다.
+
+## Fine-tuning BART
+![figure 2](../blogImage/4-figure2.png)
+
+**Sequence Classification Tasks**
+
+sequence classification task에서는 encoder와 decoder 둘 다 동일한 input을 입력받는다. decoder의 최종 hidden state를 multi-class linear classifier에 넣어줘서 classification을 한다.
+
+BERT가 [CLS] 토큰을 이용하는 것 처럼, BART에서도 추가적인 토큰을 마지막에 넣어줘서 그 토큰의 decoder에서의 output이 전체 input 값을 반영하고 있도록 한다.
+
+**Token Classification Tasks**
+
+token classification task에서는 전체 document를 encoder와 decoder의 input으로 넣고, decoder의 최종 hidden state를 각 토큰에 대한 representation으로 사용한다. 이 representation을 이용해 각 토큰을 분류한다.
+
+**Sequence Generation Tasks**
+
+BART는 autoregressive한 decoder를 갖고 있기에 generation task에 맞게 바로 fine-tuning 할 수 있다. 
+
+**Machine Translation**
+
+translation task를 위해 BART encoder의 embedding layer를 새로운 임의로 초기화된 encoder로 대체한다. 이렇게 추가한 encoder까지 합쳐서 end-to-end로 모델을 fine-tuning하게 되는데, 한국어 → 영어의 번역을 한다고 했을 때, 새 encoder에서 한국어를 영어로 매핑해줘서 BART에서 한국어를 denoise할 수 있도록 해준다. 
+
+새로운 encoder가 추가됨에 따라 fine-tuning 시 2단계로 진행했다.
+
+(1) 대부분의 BART의 parameter를 freeze하고, 추가된 encoder, BART의 positional embedding, 첫번째 encoder layer의 self-attention input projection matrix($W_q$, $W_k$, $W_v$)만 학습시킨다.
+
+(2) 이후 모든 parameter를 약간의 iteration 동안만 학습시킨다.
+
+## Comparing Pre-training Objectives
+BART와 다른 pre-trained 모델의 성능을 비교하고, BART 내에서도 pre-training 방법 중에서 어떤 방법이 여러 task에서 좋은 성능을 보이는 지 비교한 표는 다음과 같다. 
+
+![table 1](../blogImage/4-table1.png)
+
+1. pre-training 방법은 각 task에 따라 효과가 좋을 수도, 미미할 수도 있다.
+2. 토큰 마스킹은 아주 중요하다. Document Rotation이나 Sentence Permutation만을 이용해 pre-training 했을 때 그 성능은 좋지 않았다. 
+3. pre-training동안 LTR auto-regressive한 모델링을 하지 않았던 MLM, PLM에서는 generation task의 성능이 좋지 않았다.
+4. 전체 context를 파악할 수 있는 bidirectional encoder는 SQuAD에서 중요하다. 그러나 BART는 전체의 절반에 해당하는 encoder layer만으로도 비슷한 성능을 보인다.
+5. pre-training 말고도 중요한 요소들이 더 있다. 저자는 여기서 만든 PLM이 XLNet보다 성능이 떨어지는 것을 보고 XLNet의 relative-position embedding이나 segment-level recurrence 등을 포함시키지 않았기 때문이라고 주장한다.
+6. pure LM이 ELI5에서 가장 성능이 좋았다. 이로써 BART는 input이 output을 제한하지 않을수록 성능이 떨어진다는 것을 알 수 있다.
+7. text-infilling을 이용한 BART는, ELI5를 제외한 모든 task에서 성능이 좋았다.
+
+## Large-scale Pre-training Experiments
+최근 연구는 pre-training에서 큰 배치 사이즈와 큰 corpora를 가질 때 downstream task에서의 성능이 향상되었다는 것을 보여준다.
+
+### Experimental Setup
+encoder와 decoder를 각각에 대해 N=12, H=1024.
+
+batch size = 8,000
+
+500,000 train step
+
+BPE for tokenizing
+
+앞선 comparison의 결과에 따라, text infilling과 sentence permutation을 함께 사용함.
+
+30%의 토큰을 마스킹하고 모든 문장의 순서를 임의로 섞음.
+
+모델이 더 잘 학습하도록 마지막 10%의 학습동안 dropout을 하지 않음.
+
+### Discriminative Tasks
+![table 2](../blogImage/4-table2.png)
+
+BART와 주요 비교 대상은 RoBERTa인데, 이 둘은 같은 리소스를 이용하고 다른 목적 함수를 통해 학습되었다. 전반적으로, 대부분의 task에서 유사한 성능을 보이고 있다. 
+
+여기서 알아야 할 점은, BART의 generation task 성능 향상이 discriminative task의 성능에 별 영향을 끼치지 않았다는 것이다.
+
+### Generation Tasks
+1. **Summerization**
+
+![table 3](../blogImage/4-table3.png)
+
+CNN/DailyMail는 Extractive한 모델이 높은 성능을 보이곤 한다. XSum abstractive한 성격을 띄고 있어 extractive한 모델을 이용했을 때 성능이 잘 안 나온다.
+
+하지만, BART는 CNN/DM, XSum 둘 다 이전의 연구들과 비교했을 때 가장 좋은 성능을 보여주었다. 성능 뿐만아니라 요약된 내용의 퀄리티도 더 좋았다.
+
+1. **Dialogue**
+
+![table 4](../blogImage/4-table4.png)
+
+1. **Abstractive QA**
+
+![table 5](../blogImage/4-table5.png)
+
+ELI5를 이용해 길이가 긴 자유로운 형식의 대답을 하는 능력을 평가했다. 다른 모델에 비해 성능이 개선되기는 했지만 이 문제는 여전히 풀기 힘들다고 말한다.
+
+### Translation
+translation 성능을 평가하기 위해, 앞서 설명했던 대로 새로운 6 layer의 transformer encoder를 추가해주었다. 이 encoder는 루마니아어를 영어 representation으로 매핑하여, BART가 이 representation을 이용해 다시 영어로 de-noise 할 수 있게 해준다. 
+
+![table 6](../blogImage/4-table6.png)
+
+Baseline은 Large transformer 모델이고, Fixed BART는 [앞서](https://www.notion.so/1-9bffe3c0a4e04d309d2a0b3ac14e640a) 설명한 두 단계의 fine-tuning 과정 중 1단계까지만 한 것이고, Tuned BART는 2단계까지 수행한 모델이다.
+
+## Conclusion
+손상된 document로부터 원본으로 복구시키도록 pre-training 된 모델인 BART를 소개했다. BART는 discriminative task에서 RoBERTa와 비슷한 성능을 보였으며, generation task에서도 여러 sota를 달성했다. 앞으로는 pre-training을 위한 document를 손상시키는 여러가지 방법들에 대한 연구를 해야한다고 말한다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

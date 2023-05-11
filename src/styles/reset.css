@@ -50,3 +50,14 @@ table {
 	border-collapse: collapse;
 	border-spacing: 0;
 }
+
+/* katex */
+.math-display {
+	color: black;
+}
+
+@media (prefers-color-scheme: dark) {
+  .math-display {
+		color: white;
+  }
+}

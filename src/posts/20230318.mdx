@@ -1,0 +1,427 @@
+---
+id: "20230318"
+slug: "/20230318"
+title: "(T5) Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer"
+description: ""
+author: "Vive Kang"
+date: "2023-03-18"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+
+## Motivation & Introduction
+인터넷 상에 존재하는 상당한 양의 unlabeled data를 이용한 unsupervised learning으로 학습된 모델들이 연이어 sota를 달성하고 있다. 이 점에 힘입어, NLP 분야에 대한 transfer learning 방법론에 대한 개발도 상당히 진행되고 있는데, 구체적으로 다양한 pre-training objective, unlabeled dataset, benchmark, fine-tuning 방법 등에 대한 연구가 많이 진행되고 있다.
+
+이렇게 다양한 기술들과 빠른 발전 속도 때문에 다양한 여러 알고리즘들을 비교해보고, 새로운 각각의 contribution들의 효과를 정확히 파악하고, transfer learning에 대한 어떤 방법들이 나와있는지 정확히 이해하는 게 힘들다.
+
+이렇게 시작한 논문에서의 underlying 아이디어는 모든 text를 이용하는 task를 "text-to-text" 문제로 보겠다는 것이다. 이 text-to-text 프레임워크는 우리가 모든 task에 대해 같은 모델, 같은 objective, 같은 학습 과정, 같은 decoding 과정을 적용할 수 있게끔 해준다.
+
+논문에서는 다양한 transfer learning objective들, unlabeled dataset, 그 외의 요인들을 비교하면서 동시에 모델과 dataset의 스케일을 키워서 transfer learning의 한계에 대해서도 연구해보려 한다고 한다.
+
+![1](../blogImage/9-1.png)
+
+## Setup
+
+### Model
+
+transformer가 나온 이후부터 대부분의 모델들이 transformer 아키텍쳐를 따르기 때문에 이 논문에서 다루는 모든 모델은 transformer 아키텍쳐 기반의 모델들이다. 그리고 새로 제안하는 모델도 그 아키텍쳐에서 많이 벗어나지 않는다. 
+
+하나씩 설명해보면, 우선 input sequence 토큰들은 embedding된 후 encoder로 전달된다. encoder는 self-attention layer와 작은 FFN, 총 2개의 subcomponent로 구성된 "block"을 쌓아올린 형태로 구성된다. 각 subcomponent 직후에는 Layer normalization을 수행하는데, 이 논문에서는 기존 LayerNorm의 bias는 제외하고 rescale만 수행하는 simplified Layer normalization을 수행한다. 각 subcomponent의 input 값을 output값에 더해주는 residual connection과 dropout도 동일하게 수행한다. 
+
+decoder 파트는 각 self-attention layer 이후에 encoder의 output을 input으로 받는 cross-attention이 추가된 것 빼고는 거의 비슷하다. decoder의 self-attention은 autoregressive한 형태로 사용된다. 최종 decoder의 output 값은 softmax를 activation func으로 갖는 dense layer를 거치게 되는데, 이 layer에서는 input embedding 때 사용했던 weight 값과 동일한 값을 사용한다(embedding → text). 아키텍쳐에 사용된 모든 attention은 여러개의 head를 이용하고 그 output을 concat해서 사용한다.
+
+기존 transformer에서는 attention이 토큰의 위치 정보를 알지 못한다는 점 때문에 absolute positional embedding을 위해 sinusoidal position을 사용하거나 학습된 positional embedding을 이용했었는데, 최근에 들어서 relative position embedding을 많이 이용한다. relative position embedding은 attention 메커니즘에서의 두 토큰의 "key"와 "query" 사이의 offset에 따라 학습된 embedding을 만들어 낸다. 그리고 효율을 높이기 위해, layer 내부의 각 attention head들은 서로 다른 학습된 position embedding을 사용하지만 layer끼리는 position embedding을 공유한다. 즉, 모델의 layer 전체에서 position embedding을 공유한다. 
+
+정리하자면, T5는 LayerNorm bias를 제거한 점, Layer normalization을 residual path 바깥에 위치시킨 것, 다른 position embedding을 사용한 것을 제외하면 기존 transformer와 동일하다.
+
+### The Colossal Clean Crawled Corpus (C4)
+
+unsupervised learning을 할 때 상당한 양의 dataset을 사용하게 되는데, 이 논문에서는 unlabeled data의 퀄리티, 특성, 사이즈가 끼치는 영향에 대해 알아보려 한다. 그러기 위해서 기존에 사용하던 웹 html으로 만든 Common Crawl에 몇가지 cleanup 과정을 추가했다.
+
+- 마침표, 느낌표, 물음표, 따옴표 등으로 끝나는 문장만 선별
+- 한 페이지에 5문장 이하인 페이지는 제외하고, 최소 3 단어 이상을 포함하는 문장만 선별
+- List of Dirty, Naughty, Obscene or Otherwise Bad Words 가 있는 문장은 제외
+- Javascript라는 단어가 포함된 문장 제외
+- lorem ipsum 이 들어간 페이지 제외
+- {}가 포함된 페이지 제외
+- 연속된 3문장을 1세트로 보고 동일한 세트가 있는 경우 하나만 남기고 다 제외
+- 영어로 된 페이지만 사용
+
+### Input and Output Format
+
+하나의 모델을 다양한 task에 대해서 학습시키려면 모든 task를 text-to-text 형식으로 던져줘야 한다. 즉, 모델은 context나 conditioning에 관한 text input을 받고 output text를 생성하는 것이다. 모델에게 어떤 task를 수행해야 하는지 알려주기 위해, task-specific prefix를 실제 input 값 앞에 더해준 후에 모델에 입력한다.
+
+## Experiments
+
+NLP 분야의 transfer learning의 발전은 새로운 pre-training objective, 새로운 아키텍쳐, 새로운 unlabeled data 등에 힘입었다. 이 파트에서는 경험적인 조사를 통해 이것들에 대한 contribution과 중요성을 확인하려 한다.
+
+가능한한 많은 요소들을 기존에서 변형하지 않은 채로, 다양한 task에 대한 다양한 접근법들을 비교하는 게 목표이다. 그러나 몇몇 케이스에 대해서는 기존 접근법을 정확히 그대로 사용하지는 않았는데, 그 예로 BERT가 있다. 논문에서 다루려는 모델 아키텍쳐에는 BERT처럼 encoder-only 만을 사용하는 것이 없다. 따라서 그 대신 BERT의 Masked language modeling objective와 유사한 방식을 사용하는 것으로 대신했다. 
+
+### Baseline
+
+**Model**
+
+요즘 많은 transfer learning의 접근법들은 transformer의 encoder나 decoder 중 하나의 스택으로만 구성하지만, 논문에서는 encoder-decoder 구조가 generative task와 classification task 둘 다 에서 좋은 결과를 보인다는 다는 걸 알아냈다고 한다. 
+
+encoder와 decoder 각각 12 block으로 구성했고, BERT-base와 유사하게 디자인했다. 총 parameter 수는 대략 220M개로 BERT-base의 약 2배인데, BERT에 decoder가 추가된 것 만큼 늘어났다고 생각해도 된다.
+
+**Training**
+
+모든 task는 text-to-text task이기 때문에 standard maximum likelihood만 이용해서 학습하면 된다. 
+
+C4를 2^19 = 524,288 step 을 pre-train 했고 최대 sequence length 512(=2^9), batch size 128(=2^7)을 이용했다. 각 batch 마다 2^16 = 65,536 개의 토큰이 들어있고, 여기에 step을 곱하면 총 2^35 = 34B 개의 토큰을 학습한 것으로 볼 수 있다. 이는 BERT(137B), RoBERTa(2.2T)보다 더 적은 수치이다. 2^35개의 토큰만 사용한 이유는 적당한 성능을 내기에 충분한 양이면서 합리적인 연산 비용이 들었기 때문이다. 2^35개의 토큰은 전체 C4 data 보다 적은 양이기에 중복되어 학습된 데이터는 없다.
+
+pre-training 동안 "inverse square root" learning rate를 사용했다. : $1/\sqrt{max(n,k)}$ (n: iteration, k: warm-up steps(10^4)). 즉, 10^4 step까지는 0.01의 learning rate를 이용하고 그 이후부터는 계속 감소하는 rate를 사용한다.
+
+모든 task에 대해 2^18 = 262,144 step 동안 fine-tuning을 진행했다. 이 값은 많은 dataset이 있어 학습할수록 좋은 성능을 내는 high-resource task와 dataset이 적어서 빠르게 overfitting 될 수 있는 low-resource task 사이의 적당한 값이다.
+
+**Vocabulary**
+
+text를 WordPiece 토큰으로 인코딩하기 위해 SentencePiece를 사용하고, 32000 wordpiece vocab을 사용한다. 나중에 영어 → 독일어,프랑스어,루마니안어 번역 task에 대해서 fine-tuning 할 것이기 때문에 C4에서 각 언어별 페이지를 분류해서 사용했다. 
+
+**Unsupervised Objective**
+
+BERT의 MLM과 word dropout regularization에 영감을 받아서, input sequence의 15%를 임의로 샘플링한 후 dropout 했다. dropout된 토큰 구간에는 하나의 보조 토큰으로 대체한다. 보조 토큰은 sequence 별로 유니크한 ID 값을 갖는다. 
+
+![2](../blogImage/9-2.png)
+
+위 예시를 보면, 연속된 토큰을 하나의 보조 토큰으로 마스킹하고(랜덤 샘플링한 토큰이 이어서 나올 경우 그 토큰들을 하나로 취급한다는 뜻), 마스킹된 sequence를 input으로 입력한다. 최종 output은 dropout된 span들로 구성되는데, 각각은 본인이 input sequence에서 마스킹 되었던 보조 토큰(< X >, < Y >)으로 구분하고 맨 마지막에는 보조 토큰(< Z >)을 하나 새로 넣어준다.
+
+이 방식을 사용함으로써 pre-training의 연산 비용을 줄일 수 있었다. 
+
+**Baseline Performance**
+
+이상적으로, 더 좋은 결과를 얻기 위해 모든 experiment에 대해 여러번 확인을 해봐야하지만, 엄청난 비용때문에 다른 대안을 사용했다. baseline 모델을 밑바닥부터 각각 10번 학습하고(random initializations and dataset shuffling), 이 결과의 분산을 실제 experiment의 분산으로 생각하는 것이다.
+
+별개로, pre-train 없이 각각의 downstream task에 대해 2^18 step 동안 학습한 모델의 성능을 측정했고 이 두가지를 비교해보았다.
+
+![3](../blogImage/9-3.png)
+
+전반적으로, baseline 모델의 결과는 비슷한 사이즈의 기존 모델들과 비슷한 성능을 보여준다. 예를 들어, BERT-base는 SQuAD에서 80.8, MNLI에서 84.4 등의 점수를 받았다. (사실 BERT와는 다르게 encoder-decoder 모델이고, 대략 1/4정도의 pre-train만 진행했기 때문에 BERT와 직접적으로 비교하기는 애매한 면이 있다.)
+
+### Architectures
+
+transformer는 원래 encoder-decoder 아키텍쳐로 소개 되었지만, transfer learning에 대한 여러 최근 연구에서는 다른 변형된 아키텍쳐를 이용한다. 이제 이런 아키텍쳐의 변형들에 대해 비교해보려 한다.
+
+**Model Structures**
+
+![4](../blogImage/9-4.png)
+
+> y1을 출력할 때, x1~x5를 다 사용할 수 있고(왼쪽), x1을 제외한 값은 마스킹(중간), prefix는 전부 사용하고 이후부터 마스킹(오른쪽)
+> 
+
+![5](../blogImage/9-5.png)
+
+첫번째 아키텍쳐는 transformer이다. transformer encoder의 self-attention은 Fully-visible한 마스킹 패턴을 갖는다. decoder의 self-attention은 Causal 마스킹 패턴을 갖는데, 이는 pre-training 동안에만 사용된다. 그리고 decoder는 autoregressive하게 output을 생성하는데, output distribution으로부터 토큰을 예측하게 되고, 이 토큰은 다음 토큰을 예측할 때 input 값으로 들어가게 된다. transformer의 decoder 부분은 LM처럼 사용될 수도 있다.
+
+LM은 주로 compression이나 sequence generation에 사용되는데, 단순히 input과 target을 concat함으로써 text-to-text 프레임워크에서도 사용할 수 있다. 예를 들어, 영어 → 독일어 변역을 한다고 생각해보자. input "That is good."과 target "Das ist gut." 이 있을 때, "translate English to German: That is good. target: Das ist gut." 이 sequence를 학습시켜주면 된다. 이 예제에 대한 모델의 예측 값을 알고 싶으면, "translate English to German: That is good. target:"까지 입력해주면 되는데, 그러면 그 뒤에 나머지 부분을 autoregressive하게 생성해준다. 
+
+text-to-text에서 LM을 사용할 때 근본적인 단점은, Causal masking이 i번째의 output을 i번째 까지의 input sequence에만 의존한다는 것이다. prefix또는 context가 함께 주어졌을 때, Causal masking 방식에선 prefix의 representation을 만들어내는 데 불필요하게 마스킹된 prefix를 사용하게 된다.
+
+이 문제를 해결하기 위해, sequence의 prefix 부분에는 Full-visible masking을 이용하고 prefix가 아닌 부분만 Causal masking을 사용한다. 위의 영어 → 독일어 번역 예제에서, prefix "translate English to German: That is good. target:"에서는 fully-visible masking을 사용하고, target "Das ist gut."을 예측하도록 학습하는 과정에서는 Causal masking을 사용한다.
+
+text-to-text 프레임워크에서 prefix LM 아키텍쳐는 classification task를 수행할 때 BERT와 유사한 구조를 가진다. 최종 input이 "mnli premise: I hate pigeons. hypothesis: My feelings towards pigeons are filled with animosity. target: entailment"라고 예시를 들면, "entailment" 앞까지가 fully-visible prefix에 해당한다(BERT의 CLS 토큰과 유사함). 그리고 classification 결과인 "entailment"를 출력하게 되는데, 모델이 적절한 class 라벨을 출력하게 하는 것은 input prefix의 "mnli"를 통해 수행하게 할 수 있다. prefix LM과 BERT 아키텍쳐의 차이는 prefix LM에서는 classifier가 decoder에 포함되어 있다는 점이다.
+
+**Comparing Different Model Structures**
+
+두 모델이 같은 수의 parameter를 갖고 있거나, (input-sequence, target-sequence) 대비 연산량이 동일하다면 동등한 모델이라고 할 수 있다. 그러나, 이 두가지에 대해서 encoder-decoder 모델과 encoder/decoder 중 하나의 스택으로 구성된 LM과는 비교하기 힘들다. encoder-decoder 모델이 각각 $L$ layer를 갖고 있다면 그 parameter 수는 $2L$ layer를 갖는 LM과 거의 비슷하다. 하지만 이 $L$ + $L$ encoder-decoder 모델은 L layer를 갖는 LM과 연산 비용이 거의 동일하다. 
+
+- 그 이유
+    
+    This is a consequence of the fact that the L layers in the language model must be applied to both the input and output sequence, while the encoder is only applied to the input sequence and the decoder is only applied to the output sequence
+    
+
+**Objectives**
+
+basic LM objective랑 앞서 설명한 baseline denoising objective(span masking한 부분을 예측하는 것)를 둘 다 고려한다. 예측하기 전에 prefix를 갖는 모델(encoder-decoder 모델과 prefix LM)의 경우, unlabeled dataset에서 span of text를 샘플링하고 임의의 위치에서 prefix와 target으로 나눈다. standard LM의 경우 샘플링한 span 전체를 예측하게 한다. 
+
+
+**Result**
+
+![6](../blogImage/9-6.png)
+
+모든 task에 대해서 denoising objective를 가진 encoder-decoder 아키텍쳐가 가장 높은 성능을 보였다. 이 아키텍쳐는 가장 많은 parameter 수(2P)를 가졌지만 P개의 parameter를 갖는 단일 스택 모델과 연산 비용은 동일하다. 
+
+encoder, decoder 간 parameter 공유한 모델은 성능이 거의 내려가지 않았다.
+
+layer 수를 줄였더니 성능이 많이 안 좋아졌다.
+
+shared enc-dec가 decoder-only prefix LM보다 성능이 좋았다.
+
+### Unsupervised Objectives
+
+unsupervised objective는, downstream task에 적용할 수 있는 일반적인, 범용적인 지식을 모델에게 제공해주기에 unsupervised objective를 잘 선택하는 것이 중요하다. 여기 파트에서는 다양한 unsupervised objective를 비교해보려 하는데, 기존 objective를 그대로 사용하는 것이 아닌 text-to-text encoder-decoder 프레임워크에 맞게 변형한다던지 여러가지 접근법들을 결합한 objective를 사용한다고 한다.
+
+![7](../blogImage/9-7.png)
+
+**Disparate High-level Approaches**
+
+접근 방식이 다른 3가지 테크닉을 비교해보려 한다.
+
+첫째로 prefix language modeling objective 이다. 이 방법은 span of text를 두 덩이로 나누어서 하나는 encoder의 input으로 사용하고 다른 하나는 decoder에서 예측하는 target sequence로 사용하는 방식이다.
+
+둘째로 BERT에서 사용한 masked language modeling objective를 변형한 objective이다. 15%의 토큰을 마스킹하는데 그 중 90%를 special mask 토큰으로 바꾸고 나머지 10%는 임의의 토큰으로 바꾼다. BERT는 encoder-only 모델이기에 학습 목표는 encoder의 output으로 마스킹된 토큰을 복구하는 거였지만, encoder-decoder에 적용하면서 단순히 원래 문장 전체를 target으로 삼았다. (이 부분은 앞서 언급한 손상된 토큰만을 target으로 삼는 baseline objective랑은 다르다.)
+
+셋째로 denoising sequential autoencoder이다. 토큰 sequence를 순서를 섞어서 사용하고 섞기 전의 원본 sequence를 target으로 삼는다.
+
+![8](../blogImage/9-8.png)
+
+두번째 BERT-style objective의 성능이 가장 좋았다.
+
+**Simplifying the BERT objective**
+
+BERT-style objective의 성능이 가장 좋았기에 이제는 BERT-style denoising objective의 변형들에 집중해보려 한다. 이 objective는 원래 encoder-only 모델의 pre-training을 위한 것이었기 때문에, encoder-decoder text-to-text 세팅에 더 효율적이도록 변형할 수 있을 거라 생각한다.
+
+첫째로, BERT-style objective에서 임의의 토큰으로 바꾸는 걸 없앴다. MASS 모델에서 비슷한 마스킹 objective를 사용하기에 MASS-style objective라 명명한다.
+
+둘째로, 앞서 baseline pre-training objective로 사용했던 건데, 임의의 토큰들을 샘플링 후 연속으로 나오는 토큰 span을 하나의 유니크한 마스킹 토큰(토큰 ID를 가지고 있다.)으로 바꿔준다. target으로는 각 유니크한 토큰으로 구분된 corrupted token sequence를 갖는다. 위 table3의 5번째 row가 그 예시이다.
+
+마지막으로, input sequence에서 corrupted token을 완전히 제거하고 삭제된 토큰들을 순서대로 예측한다. table3의 6번째 row가 그 예시이다.
+
+![9](../blogImage/9-9.png)
+
+encoder-decoder text-to-text 세팅에서는 4가지 objective들이 성능상 큰 차이를 보이지는 않았다. 
+
+**Varying the Corruption Rate**
+
+마스킹(corrupted) 토큰 비율을 여태는 15%였는데, 다양한 비율을 비교해보았다.
+
+![10](../blogImage/9-10.png)
+
+BERT에서 사용한대로 15%의 비율이 다양한 task에서 골고루 성능이 좋았다.
+
+**Corrupting Spans**
+
+각 토큰에 대해서 마스킹할지 안 할지 결정할 때 i.i.d.(independent and identically distributed)한 방식으로 결정한다. 따라서 길게 연속되는 토큰이 마스킹되는 경우가 잘 발생하지 않는다. 그러나 연속된 여러 개의 마스킹 토큰을 하나의 유니크한 토큰으로 바꿔줌으로써 전체 sequence의 길이가 줄어들게 되고 이게 속도를 향상시킬 수도 있을 것이라고 생각했다.
+
+테스트해보기 위해, 마스킹될 토큰의 비율과 마스킹될 span의 총 갯수를 파라미터로 받는 objective를 이용했다. 예를 들어, 지금 처리 중인 sequence에 500개의 토큰이 있고, 마스킹 비율 15%과 총 25개의 마스킹 span을 갖는다고 한다면, 총 마스킹 토큰 수는 500x0.15=75개이고, average span length는 75/25=3이다. 이 objective를 이용할 때, average span length가 2, 3, 5, 10일때를 기존 i.i.d.방식과 비교했다.
+
+![11](../blogImage/9-11.png)
+
+average span length 3일 때, non-translation task에서 baseline i.i.d.보다 성능이 약간 더 잘 나왔다. 그리고 이 span-corruption objective는 예상대로 어느정도 속도 향상에도 도움이 되었다.
+
+**Discussion**
+
+![12](../blogImage/9-12.png)
+
+위 flow chart는 여태 unsupervised objective를 탐구하는 동안 거쳐갔던 옵션들과 그 과정을 나타낸다.
+
+성능상 가장 큰 차이를 보인 부분은 BERT-style의 denoising objective와 LM, deshuffling 이다. denoising objective의 변형들에서는 큰 성능차이가 있지는 않았는데 구체적으로 어떤 objective를 선택하느냐에 따라서 학습 속도 면에서 차이가 났다. 
+
+### Pre-training Data set
+
+unsupervised objective 처럼 pre-training data set 또한 transfer learning에서 중요한 요소임이 분명하지만, 여러 pre-training data set에 대해 비교해보는 연구도 상대적으로 적고, 정해진 "standard"한 data set도 없다.
+
+이 파트에서는 C4 dataset의 여러 변형들과 다른 pre-training data를 비교해보려 한다.
+
+**Unlabeled Data Sets**
+
+![13](../blogImage/9-13.png)
+
+앞에서 설명한 C4에 cleanup(필터링)을 하지않았을 때는 모든 task에서 성능이 감소했다. 
+
+도메인에 맞는 unlabeled data로 pre-train 했을 때 downstream task에서 더 높은 성능을 보였다.
+
+단일 도메인에 대해서만 pre-training 하는 것의 단점은 그 dataset이 너무 적다는 것이다.
+
+**Pre-training Data Set Size**
+
+![14](../blogImage/9-14.png)
+
+unlabeled data set 사이즈가 끼치는 영향을 파악하기 위해, C4의 여러 변형들과 비교했다. 기존 C4는 2^35개의 토큰을 학습 했는데, 2^29개의 토큰을 가지고 64번 반복학습한 모델부터 2^23개의 토큰을 4096번 반복 학습한 모델까지와 비교했다.
+
+![15](../blogImage/9-15.png)
+
+예상대로 data set 사이즈가 줄어들면서 성능이 감소했다. 논문에서는 그 이유가 학습 데이터 양이 적을수록 모델이 그 데이터를 더 memorization 한다고 예상했고, 위 Figure 6에서 보듯이 데이터 사이즈가 줄어들수록 loss가 작아져 그 예상이 맞다는 것을 알 수 있었다.
+
+그러나, 동일한 데이터로 64번 반복했을 때 오히려 성능이 좋아지기도 했는데 이는 어느 정도의 반복 학습은 도움이 된다는 것을 시사한다. 하지만 논문에서는 추가적인 pre-training이 도움이 되고 추가적인 unlabeled data를 모으는 게 쉽다는 걸 고려하면, 가능한 한 많은 dataset을 학습시키는 걸 추천한다.
+
+### Training Strategy
+
+**Fine-Tuning Methods**
+
+encoder-decoder 모델을 fine-tuning 할 때 모든 parameter를 학습시키는 것과 일부 parameter만 학습시키는 두 가지 접근법을 비교해본다.
+
+첫번째 접근법인 "adapter layers"는 dense-ReLU-dense로 구성된 block을 transformer의 각각의 FFN 뒤에 추가해주는 것이다. 이 block의 input과 output의 차원을 동일하게 맞춰줘서 추가적인 아키텍쳐 수정이 없도록 한다. fine-tuning 동안, adapter layer와 layer normalization parameter만 업데이트 된다. 여기서 주요한 hyperparameter는 추가된 block의 inner dimensionality $d$ 값이다. 논문에서는 다양한 $d$ 값을 사용해 테스트한다.
+
+두번째 접근법은 "gradual unfreezing"이다. gradual unfreezing은 fine-tuning을 하면 할수록 더 많은 parameter를 학습하는 것이다. 처음에는 마지막 layer의 parameter만 업데이트 되다가 두번째 layer까지 하고, 결국 전체 parameter가 fine-tuning될 때 까지 계속한다. 즉, 총 2^18 step 동안 fine-tuning을 하고 12개의 layer가 있다면 2^18/12 구간을 기점으로 학습 범위를 늘려나가는 것이다.
+
+![16](../blogImage/9-16.png)
+
+gradual unfreezing은 fine-tuning 속도를 향상시켰지만 모든 task에서 약간의 성능 감소가 있었다.
+
+**Multi-Task Learning**
+
+지금까지는 각각의 downstream task에 맞게 fine-tuning 하기 전에 single unsupervised learning task를 통해 pre-training 해왔다. "multi-task learning"은 하나의 task가 아닌 여러 개의 task를 pre-training 하는 것이다. multi-task learning의 목적은 여러 task를 학습한 하나의 모델을 만드는 것이고, 따라서 이 모델은 다양한 여러 task에 대해 같은 parameter를 사용하게 된다. 논문에서는 이 목표를 다소 변경시켰는데, 하나의 모델에 여러 task를 학습시켜서 개별 task에 잘 동작하는 개별적인 parameter들을 만드는 것이다. 예를 들어, 하나의 모델을 여러 task로 학습시킨 후 각 task에 맞는 checkpoint의 parameter를 이용하는 것이다. 
+
+text-to-text 프레임워크 상에서, multi-task learning은 단순히 dataset을 섞은 것과 같다. 따라서 multi-task learning을 사용하면 추가적인 unsupervised task를 단순히 해당 unlabeled data를 섞어줘서 쉽게 학습할 수 있다. 반대로, 대부분의 NLP에 적용되는 multi-task learning은 task 별로 task-specific한 classification network를 더해주거나 각 task에 맞는 다른 loss function을 사용해야 한다.
+
+multi-task learning에서 가장 중요한 점은 각 task 마다 어떤 비율로 학습을 시킬 지를 결정하는 것이다. 결정하는 요소로는 data 크기, difficulty of learning(task를 효율적으로 수행할 수 있으려면 얼마나 많은 데이터를 학습해야 하는지), regularization 등이 있다.
+
+또 다른 문제점으로는 "task interference"가 있는데, 이는 한 task에 대해 좋은 성능을 내게끔 만들면 다른 task에서의 성능이 감소하는 것이다. 
+
+이런 점을 감안하여, 각 task 별 데이터 비율에 대한 다양한 탐구를 하려 한다.
+
+- **Examples-proportional mixing**
+    
+    모델이 overfitting하는데 가장 중요한 요소는 data set의 크기이다. 따라서 섞는 비율을 결정하는 자연스러운 방법은 해당 task의 dataset 비율만큼 가져가는 것이고, 그러기 위해선 모든 task data set을 이어붙인 후 랜덤 샘플링해서 사용하면 된다. 그러나 다른 모든 supervised task의 데이터를 합친 것 보다 많은 양의 unlabeled data를 사용하는 denoising task를 포함하고 있기 때문에, 단순 샘플링을 하게 되면 모델은 거의 unlabeled data만 가지고 학습하게 될 것이다. 이를 해결하기 위해, N개의 task에 대해 각각의 dataset의 수 $e_1,...,e_N$이 있을 때, $m$번째 task의 dataset에서 샘플링 될 확률을 $r_m=min(e_m, K)/\sum{min(e_N, K)}$으로 설정했다. ($K$는 인위적으로 설정할 수 있는 dataset size maximum 값이다)
+    
+
+- **Temperature-scaled mixing**
+    
+    간단하게 설명하면, $T$값에 따라 scale이 달라지게 되는데, $T=1$일 경우 앞서 설명한 "Examples-proportional mixing"이고, $T$ 값이 커지면서 바로 뒤에 나오는 "equal mixing"에 가까워지는 것이다.
+    
+
+- **Equal mixing**
+    
+    각 task dataset에서 같은 확률로 샘플링하는 것이다. 사실 이 방식을 그렇게 좋은 방식은 아닌데, low-resource task에서는 쉽게 overfitting 되고, high-resource task에서는 쉽게 underfitting 되기 때문이다
+    
+
+![17](../blogImage/9-17.png)
+
+전반적으로, multi-task training이 성능이 baseline(pre-train 후 task-specific fine-tuning)보다 안 좋았다. equal mixing은 예상대로 성능이 안 좋았다. examples-proportional mixing에서 위 결과를 보면 각 task마다 적절한 $K$값이 있다는 것을 알 수 있다. 
+
+**Combining Multi-task Learning with Fine-tuning**
+
+앞서 사용한 multi-task learning은 기존 방식에서 조금 변형한 방법이었다. 즉 각 task에 맞는 parameter(checkpoint)를 사용하는 방법이었다. 이걸 조금 확장시켜서, 하나의 모델에 여러 task를 학습시킨 후 task-specific fine-tuning을 하는 것이다. 다음 3가지와 이를 비교해보았다.
+
+1. $K=2^{19}$의 examples-proportional mixture로 여러 task에 대해 pre-training한 후, downstream task에 맞게 fine-tuning하는 것.
+이를 통해, pre-training에 unsupervised task 뿐만 아니라 supervised task도 포함시켜서 downstream task에 어느정도 미리 노출되어있는 게 도움이 되는지 판단할 수 있을 것이다.
+또한, supervised source를 섞음으로써 pre-trained 모델이 일반적인 기술들을 파악할 수 있게하기를 기대한다.
+2. 1번과 동일한 mixture로 여러 task에 대해 pre-training 하는데, 여기서는 mixture에서 한 가지 task를 제외하고, 이후 이 제외된 task를 downstream task로 fine-tuning 한다.
+이런 방식을 "leave-one-out" multi-task training 이라고 부른다.
+3. unsupervised task를 제외한 multi-task pre-training.
+
+![18](../blogImage/9-18.png)
+
+multi-task pre-training 후에 fine-tuning을 한 것은 baseline과 성능이 비슷했다. 
+
+"leave-one-out" training은 성능이 약간 낮았는데, 이는 다양한 task를 학습한 모델은 새로운 task에도 어느정도 성능을 보인다는 것을 말한다. 즉, multi-task pre-training을 했을 때 큰 task interference(한 task에 대해 좋은 성능을 내게끔 만들면 다른 task에서의 성능이 감소하는 것)가 없었다.
+
+unsupervised task를 포함하지 않은 multi-task pre-training은 성능이 대체적으로 안 좋았다. translation에서는 오히려 성능이 좋았는데, 이는 translation task는 pre-training을 통한 이점이 별로 없다는 것을 시사한다(나머지 task는 pre-training에 영향을 많이 받는다).
+
+## Scaling
+
+여러 연구 결과에서 보듯이, 단순히 스케일을 키우는 것이 섬세하게 설계된 방법들을 이용하는 것보다 성능 향상에 더 도움이 된다. 스케일은 다양하게 키울 수 있는데, 큰 모델을 쓸 수도 있고 더 많은 step 동안 학습시킬 수도 있다. 총 연산량을 4배 늘릴 수 있게 해준다면 어떤 식으로 이용해야 할까?
+
+4배 많은 step 동안 학습시키기, 2배 많은 step 동안 학습시키고 2배 큰 모델 사용하기(parameter 수 증가), 4배 큰 모델 사용하기. batch size를 4배로 늘리기. 
+
+각각 pre-train, fine-tuning 되는 모델의 4개의 앙상블 사용하기. 좀 더 가벼운 대안으로, pre-train된 모델에 4개의 다른 fine-tuning 버전을 사용하기(연산량이 4배보다 덜 늘어나지만 비교를 위해 추가함).
+
+![19](../blogImage/9-19.png)
+
+당연하게도, 모델 사이즈와 학습 step이 늘어나면서 성능도 향상되었다. 
+
+2배 큰 모델+2배 긴 학습과 4배 큰 모델을 비교했을 때 별 차이 안 나는 걸로 봐서, 성능 향상의 관점에서 보면 학습 step의 증가와 모델 사이즈의 증가는 같은 의미를 갖는다고 볼 수 있다.
+
+앙상블도 성능을 많이 향상시켰다. 특히, 특정 task에서 가장 높은 성능을 보이기도 했다. fine-tune only 앙상블은 학습부터 새로 한 앙상블 모델들 보다는 성능이 떨어졌지만 baseline에 비해 높은 성능을 보였다.
+
+N개의 앙상블 모델을 이용하는 것은 연산 비용이 대략 N배 더 들어간다고 볼 수 있다.
+
+## Putting It All Together
+
+baseline을 앞선 테스트 결과들을 토대로 다음과 같이 수정한다.
+
+**Objective**
+
+기존의 i.i.d. denoising objective를 span-corruption objective로 변경한다. 구체적으로, average span length는 3, 비율은 15%를 사용한다. 이는 target sequence의 길이가 줄어들면서 약간의 연산 효율을 향상시키기도 한다.
+
+**Longer training**
+
+baseline에서는 상대적으로 pre-training을 적게 했다. 대략 BERT의 1/4, XLNet의 1/16, RoBERTa의 1/64 정도이다. 앞서 batch size를 늘리고 pre-training step을 늘리는 것이 성능 향상에 도움이 된다는 것을 발견했다. 따라서 1M step 동안 학습시키고 batch size 2^11, sequence length 512로 구성한다. 이는 총 1조개의 토큰을 pre-training하는 것이고 baseline과 비교했을 때 대략 32배 많은 학습량이다.
+
+**Model sizes**
+
+baseline 모델의 스케일을 키우는 게 성능 향상에 도움이 된다는 것을 발견했다. 그러나 fine-tuning 할 때의 computational resource가 제한되어 있는 상황에서는 작은 모델이 더 좋다. 따라서 여러 사이즈의 모델을 만들기도 했다.
+
+- Base - 기존 baseline 모델. 대략 220M parameter를 가진다.
+- Small - baseline 모델보다 더 작은 모델이다. $d_{model}=512, d_{ff}=2048$, 8-head attention, 6 layer로 구성되며, 총 60M parameter를 가진다.
+- Large - baseline 모델은 BERT-base 사이즈의 encoder, decoder는 사용했는데, BERT-large 사이즈의 아키텍쳐를 구성했다. $d_{model}=1024, d_{ff}=4096, d_{KV}=64$, 16-head attention, 24 layer로 구성되며 총 770M parameter를 갖는다.
+- 3B and 11B - 둘 다 $d_{model}=1024, d_{KV}=128$, 24 layer를 기반으로, 3B개의 parameter를 갖는 모델은 $d_{ff}=16384$, 32-head attention으로 구성되어있고, 11B개의 parameter를 갖는 모델은 $d_{ff}=65536$, 128-head attention을 구성된다.
+
+**Multi-task pre-training**
+
+unsupervised, supervised task들의 multi-task를 pre-training 하는 것이 unsupervised task만 학습하는 것만큼 잘 작동했다. 
+
+**Fine-tuning on individual GLUE and SuperGLUE tasks**
+
+지금까지는 GLUE와 SGLUE에 대해 fine-tuning할 때, 이 두 benchmark의 모든 데이터를 합친 다음 fine-tuning을 했다. 이런 방식은 간단하긴 하지만 성능 측면에서 각각의 task를 fine-tuning하는 것보다 약간 손해를 본다는 것을 발견했다. 그러나 각각의 task 별로 fine-tuning을 하게 되면 low-resource task의 경우 overfitting 될 가능성이 높다. 예를 들어, length-512 sequence의 batch size 2^11인 경우 low-resource GLUE, SGLUE task에서 전체 데이터가 여러번 중복 학습된다. 따라서 논문에서는 length-512 sequence의 batch size 8으로 학습했다.
+
+**Beam search**
+
+![20](../blogImage/9-20.png)
+
+지금까지는 greedy decoding(output을 예측하는 각 스텝에서 확률이 가장 높은 단어를 선택함)을 이용해왔지만, beam search를 사용했을 때 성능이 향상된다는 것을 발견했다. 논문에서는 beam size 4, length penalty 0.6을 이용했다. 
+
+여태껏 설명한 점을 제외하고는 기존에 baseline에서 설명한 학습 절차, hyperparameter 등을 그대로 이용했다. 전체적으로, 논문에서 고려한 24개 task 중에 18개에서 sota를 달성했고, 예상대로 가장 큰 11B 모델이 모든 task에서 성능이 가장 좋았다. 물론 3B 모델만으로도 기존의 몇몇 sota를 넘어선다. 
+
+WMT translation task들에 대해서는 sota를 하나도 달성하지 못했다. 그 이유 중 하나로 영어로만 구성된 unlabeled data를 사용했기 때문이라고 한다. 이 task에서 좋은 결과를 보인 대부분의 모델은 backtranslation(번역한 것을 다시 반대로 번역하여 원문과 비교하며 학습)을 사용했다고 한다.
+
+scaling을 통해 모델을 더 크게 만드는 것이 성능에 좋다는 것을 알 수 있었는데, scaling을 제외한 다른 요소들이 성능에 얼마나 영향을 주는지 확인해보려 한다. 다음 3가지를 비교했다.
+
+1. baseline 모델. 34B개의 토큰으로 학습 됨.
+2. baseline-1T 모델. baseline 모델을 T5와 같은 1T개의 토큰으로 학습함.
+3. T5-base
+
+![21](../blogImage/9-21.png)
+
+T5-base가 baseline-1T보다 좋은 성능을 보였는데, scale이 성능에 영향을 미치는 유일한 요소가 아니라는 걸 뜻한다.
+
+## Reflection
+
+### Takeaways
+
+**Text-to-text**
+
+text-to-text 프레임워크는 같은 loss function, 같은 decoding 절차를 이용해서 여러 task를 하나의 모델에 학습할 수 있게 한다. text-to-text 프레임워크가 task-specific 아키텍쳐와 비슷한 성능을 내며, scaling을 통해 sota의 성능을 낼 수 있었다.
+
+**Architectures**
+
+transformer의 다양한 변형들에 대한 시도가 있었지만, 기존의 encoder-decoder 형식이 text-to-text 프레임워크에서 가장 잘 동작한다. encoder-decoder 모델은 encoder-only 모델이나 decoder-only 모델보다 2배 많은 parameter를 사용하지만 그 연산 비용은 거의 비슷하다. 그리고 encoder와 decoder에서 parameter를 공유했을 때 성능이 떨어지지도 않았으며 오히려 총 parameter 수를 절반으로 줄일 수 있다는 것을 발견했다.
+
+**Unsupervised objectives**
+
+전체적으로, 대부분의 denoising objective(손상시키고 다시 회복하도록 학습)이 text-to-text 환경에서도 잘 적용되었다. 그리고 unsupervised pre-training의 효율적인 연산을 위해 짧은 target sequence를 사용하는 objective를 사용할 것을 권한다.
+
+**Data sets**
+
+Common Crawl web dump에서 cleanup을 거친 C4를 소개했다. 특정 downstream task에서는 in-domain unlabeled data를 사용하는 게 성능에 더 좋기도 했지만, 특정 도메인에 대한 데이터는 보통 그렇게 양이 많지 않다. 그리고 데이터 양이 적어서 pre-training동안 여러번 중복 학습을 시켜야 한다면 이는 성능이 오히려 감소하게 만들 수 있다.
+
+**Training strategies**
+
+fine-tuning 때 모든 parameter를 학습시키는 게 비싸긴 하지만, 일부 parameter만 학습시키는 것보다 성능이 뛰어났다. 그리고 여러 task에 대해서 하나의 모델에 학습시키는 방법에 대해서도 연구했는데, text-to-text 환경에서는 batch를 만들 때 단순히 다른 data set들을 섞어(mixture) 사용하는 것과 같다.
+
+multi-task learning에서 중요한 점은 학습시킬 각 task의 비율을 조절하는 일이다. 결과적으로 unsupervised pre-training 후에 supervised fine-tuning을 하는 이런 접근법에 맞는 적절한 비율을 찾지는 못했다. 하지만 fine-tuning에서 mixture를 사용했을 때 unsupervised pre-training과 비슷한 성능을 낸다는 걸 발견했다. 
+
+**Scaling**
+
+모델에 더 많은 데이터를 학습시키기, 더 큰 모델을 학습하기, 모델 앙상블을 이용하기 등의 추가적인 연산에 대해 어떤 방식이 가장 좋은지도 비교했었다. 많은 데이터를 작은 모델에 학습시키는 게 큰 모델에 적은 step으로 학습시키는 것보다 성능이 좋긴 했지만, 결과적으로 모든 방식에서 성능이 많이 향상되는 걸 발견했다. 
+
+앙상블을 이용하는 것도 성능에 도움이 되었다. 단일 모델보다는 같은 base pre-trained 모델에 다른 fine-tuning을 진행한 앙상블이 성능이 좋았고, 그것보다 pre-training과 fine-tuning 모두 따로 진행한 앙상블이 성능이 좋았다.
+
+**Pushing the limits**
+
+여태 발견한 insight를 통해 모델을 학습시켰다. unsupervised training에서 C4 dataset에 denoising objective를 적용해 pre-training을 진행했다. 그리고 개별 task에 대해 fine-tuning하기 전에 multi-task mixture를 이용해 pre-training했다. 결과적으로 대략 1T개가 넘는 토큰을 학습했다.
+
+### Outlook
+
+**The inconvenience of large models**
+
+당연하지만 중요한 사실은 큰모델이 보통 더 좋은 성능을 낸다는 점이다. 모델을 학습시킬 때 이용하는 하드웨어가 점점 저렴해지고 발전하고 있기 때문에, 모델의 스케일을 키우는 게 더 좋은 성능을 얻기 위한 좋은 방법이다. 그러나 더 작은 모델이 성능이 좋은 task도 있긴 하다. transfer learning의 장점은 low-resource task에서도 좋은 성능을 낼 수 있게 해준다는 점이다.
+
+**More efficient knowledge extraction**
+
+pre-training의 목표는 모델이 general-purpose knowledge를 학습하게 해서 downstream task에서 더 좋은 성능을 낼 수 있도록 하는 것이다. 논문에서는 pre-training을 위해 denoising corrupted spans of text를 이용했는데, 이 단순한 방식이 모델에게 general purpose knowledge를 가르치는 가장 효율적인 방법이 아닐 거라고 생각한다. 더 구체적으로, 1T개나 되는 토큰을 학습할 필요없이 좋은 성능을 얻을 수 있을 수 있다고 생각한다. 최근에는 실제 text와 생성된 text를 구분하도록 학습시킨 모델이 효율이 좋았다.
+
+**Formalizing the similarity between tasks**
+
+unlabeled in-domain data가 해당 downstream task에서 더 높을 성능을 낸다는 것을 발견했다. pre-training task와 downstream task간의 유사도에 대해 명확히 파악할 수 있다면, 어떤 unlabeled data를 사용할지 더 합리적인 선택을 할 수 있을 것이다. 그리고 이 task들 간의 관계가 supervised pre-training task를 선택하는 데에도 도움이 될 수 있다.
+
+**Language-agnostic models**
+
+영어만 pre-training한 모델이 translation task에서 sota를 달성하지 못한 것에 실망했다. 미리 어떤 언어가 인코딩될 수 있는지 지정해야 하는 문제를 해결하는 것에 관심이 있고, 이 문제를 다루기 위해 language-agnostic한 모델(언어에 상관없이 좋은 성능을 보이는 모델)에 대해 연구하고 있다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

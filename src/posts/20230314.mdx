@@ -1,0 +1,120 @@
+---
+id: "20230314"
+slug: "/20230314"
+title: "(GPT-2) Language Models are Unsupervised Multitask Learners"
+description: ""
+author: "Vive Kang"
+date: "2023-03-14"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+
+## Motivation & Introduction
+ML 시스템은 많은 성능 향상이 있었지만 여전히 사소한 변화들 예를 들어, train data, specific-task에 따라 그 결과 값이 민감하게 변화하는, 아직은 불완전한 모습을 보인다. single domain dataset과 single task를 1:1로 학습하는 이런 방식의 유행이, 현재 시스템에 나타나는 generalization을 막고 있다고 생각한다. 즉, 현재의 시스템은 generalist라기 보단 narrow expert라고 볼 수 있다. 따라서, 직접 데이터를 만들고 라벨링할 필요가 없이 여러가지 task에 general 하게 적용가능한 모델을 만들려고 한다. 그리고 fine-tuning 과정 없이 zero-shot만을 이용해 downstream task에 적용할 수 있다는 것을 보여주려 한다.
+
+## Approach
+single task를 수행하는 프레임워크는 조건부확률 $p(output|input)$로 나타낼 수 있다. general task를 수행할 수 있는 시스템은 input 데이터로 어떤 종류의 task를 처리하는 지에 대한 데이터도 받아야한다. 즉, $p(output|input,task)$의 형식으로 나타낼 수 있다.
+task specific encoder, decoder를 사용하는 것 처럼 특정 task에 대한 구분은 아키텍쳐 상에서 종종 나타난다. 그러나, 언어는 task, input, output을 특정하는 유연한 방식을 제공해준다. 예를 들어, a reading comprehension training example에서 *(answer the question, ~document~, ~question~, ~answer~)* 형태로 나타낼 수 있다. 
+
+supervised objective와 unsupervised objective는 같기 때문에, supervised objective의 최소값(global minimum)과 unsupervised objective 최소값은 같다. 여기서의 문제는 unsupervised objective가 수렴하도록 최적화할 수 있느냐는 것이다. 
+
+저자는 충분한 양을 가진 language model은 자연어 sequence로 구성된 task을 더 잘 예측하기 위해 추론하고 수행하는 방법을 배우기 시작할 것이라고 한다. 그러면 사실상 unsupervised multi task learning을 하는 것인데, 이에 대해서 zero-shot 세팅에서의 모델의 성능을 분석하여 확인해보려 한다.
+
+### Training Dataset
+논문에서 하려는 접근법은 상당한 양의 다양한 종류의 dataset이 필요하고 인터넷 상의 text들을 사용하려니 퀄리티의 문제가 있었다. 따라서 Reddit 사이트의 3 karma 이상을 받은 글의 outbound link(글 내에 포함된 link)를 사용했다. outbound link에서 얻은 HTML을 text로 변환해서 사용했는데, 따라서 이 논문을 기준으로 2017년 12월 이후의 데이터는 학습에 포함되지 않았다. 
+
+### Input Representation
+general한 LM은 어떠한 string이든 그 string이 등장할 확률을 계산해 낼 수 있어야 하고, 생성할 수 있어야 한다. 
+
+Byte Pair Encoding(BPE)은 자주 등장하는 symbol에 대한 word-level input과 자주 등장하지 않는 character-level input의 중간에서 적절히 이어주며 character와 word-level의 중간쯤에 위치한다. 이름과 다르게 BPE는 보통 byte sequence가 아니라 유니코드 상에서 동작한다. 이는 유니코드 string을 모델이 전부 포함해야 한다는 것을 뜻하는데, multi-symbol이 아닌 기본적인 vocabulary만 13만개가 넘는다. 반면, 진짜 byte-level의 BPE는 기본 vocabulary로 256개만 필요하다. 따라서 저자는 BPE를 유니코드 수준이 아닌, byte level의 string에 적용하는 시도를 하였다.
+
+그러나 이것도 바로 적용하기에는 문제가 있었는데, "dog!", "dog?", "dog." 같이 별로 유의미하지 않은 variation들을 추가한다는 것이다. 이는 제한된 vocabulary 양과 모델의 수용량을 최적으로 사용하지 못하는 것이다.
+
+이걸 방지하기 위해서 BPE가 byte sequence에서 서로 다른 character category 간에 결합하지 못하도록 막았다. 즉, alphabetic characters, numeric characters, punctuation characters 등을 구분해 서로 다른 character는 결합하지 못하게 한 것이다.
+
+이를 통해 word-level LM의 경험에 기반한 이점과 byte-level 접근법의 generality를 둘 다 얻을 수 있었다. 이 접근 방식은 유니코드 string에 확률을 할당할 수 있기 때문에 pre-processing, 토큰화, vocabulary 크기에 관계없이 모든 데이터 세트에서 LM을 평가할 수 있다.
+
+### Model
+transformer 아키텍쳐 기반인 기존 GPT 모델에서 약간만 변형하여 사용했다. 기존에 decoder block 안의 sub-layer가 끝날 때마다 residual connection + Layer Normalization을 수행했는데, LayerNorm의 위치를 sub-layer 앞으로 옮겼다. 그리고 맨 마지막 block 이후에 LayerNorm을 하나 추가했다. 그 외에도 residual layer의 weight scaling, context size 512 → 1024, batchsize: 512로 수정했다.
+
+## Experiments
+![1](../blogImage/6-1.png)
+
+4가지 모델을 구성했는데, 그 중 가장 작은 모델이 기존 GPT와 동일하다.
+
+### Language Modeling
+GPT-2는 byte-level에서 동작하고 불필요한 pre-processing이나 토큰화가 필요없기 때문에, 어떤 LM benchmark에 대해서든 평가할 수 있다. 
+
+![2](../blogImage/6-2.png)
+
+표에 나온 것 처럼 fine-tuning 없이 zero-shot만 이용하여 8개 중 7개의 SOTA를 달성했다. 작은 dataset에서 더 많은 성능 향상이 있었고 LAMBADA, CBA같은 long-term dependency에도 많은 성능 향상이 있었다.
+
+### Children’s Book Test
+![3](../blogImage/6-3.png)
+
+CBT는 named entity, 명사, 동사 등 단어의 다른 카테고리들이 성능에 미치는 영향을 연구하기 위해 만들어진 dataset이다. 빈칸에 대해 들어갈 만한 단어 10개를 선정 후 가장 높은 확률을 갖는 단어를 선택하는 cloze test이다. 위 그래프를 통해 모델 사이즈가 커지면 성능도 향상된다는 것을 알 수 있다.
+
+### LAMBADA
+LAMBADA는 토큰 간 장거리 dependency를 테스트한다. 사람이 예측하기에도 50개 이상의 토큰 context가 필요한 문장에서, 문장의 마지막 단어를 예측하도록 한다. GPT-2에서 상당한 성능 향상을 보였는데, 틀린 예측들을 살펴보니 대부분 문장이 자연스럽게 이어지긴 했지만 마지막 단어로 부적합했다는 걸 알 수 있었다. LM이 예측하려는 단어가 문장의 마지막 단어여야 한다는 것을 모른다고 생각했고, stop-word filter를 추가해줌으로서 성능을 한층 끌어올릴 수 있었다.
+
+### Winograd Schema Challenge
+Winograd Schema challenge는 text의 중의적인 부분을 해결하는 능력을 측정해서 상식 추론 능력을 평가한다. 
+
+### Reading Comprehension
+The Conversation Question Answering dataset(CoQA)는 7개의 다른 도메인의 QA dialogue로 구성되어있다. CoQA는 독해능력과 대화 내용에 따라 적절한 답변을 하는 능력을 평가한다.
+
+GPT-2는 F1 score가 55로 높게 나왔지만 기존 SOTA 모델인 BERT의 89를 넘기지는 못했다. 하지만 fine-tuning 혹은 supervised learning없이 zero-shot 만으로 이 정도의 성과를 낸 것에 의미가 있다고 생각한다. 
+
+\+ 그리고 GPT-2의 흥미로운 점은 예측 내용을 볼 때 simple retrieval을 사용하는 것 같다는 점이다. 누구냐는 질문에 문서 이름을 대답하는 것 같은…
+
+### Summarization
+![4](../blogImage/6-4.png)
+
+CNN, Daily Mail dataset을 사용해 summarization 성능을 테스트했다. 
+
+article 뒤에 "TL;DR" 이라는 문구를 추가했고, 그 뒤를 이어서 100개의 토큰을 생성하게 했다. 생성된 100개의 토큰 중 앞에서부터 3개의 문장을 article의 summary로 간주했다. 생성된 summary는 실제와 비슷했지만, article의 최근 내용에 더 초점을 두고 특정 디테일한 부분을 혼동하는 모습을 보이기도 했다.
+
+ROUGE 지표를 이용해 평가를 했으며, 3개의 랜덤한 문장을 선택하는 것 보다 조금 더 나은 성능을 보였다. 그리고 "TL;DR" 없이 테스트 했을 때 성능이 떨어지는 모습을 보였다.
+
+- ROUGE 지표란 ???
+    
+    [https://supkoon.tistory.com/26](https://supkoon.tistory.com/26)
+
+### Translation
+translation task를 수행하기 위해, GPT-2에게 "english sentence = french sentence" 형식의 예시들을 제공해주고 그 마지막으로 "english sentence ="라는 텍스트를 넣어줬다. 이후 첫번째로 생성된 문장을 translation으로 여기고 평가했다.
+
+WMT-14 English-French, French-English에서 GPT-2는 각각 5, 11.5 BLEU를 받았다. 이는 SOTA unsupervised 모델인 33.5 BLEU에 한참 못 미치는 수준이다. 하지만 dataset에서 영어가 아닌 페이지는 필터링한 것을 고려했을 때 놀랄만한 결과가 나왔다고 생각한다.
+
+### Question Answering
+![5](../blogImage/6-5.png)
+
+translation과 비슷하게 question, answer 예시 쌍을 제공했다. GPT-2는 정확히 일치하는지를 확인하는 지표에서 4.1%를 얻었다. 작은 모델들이 1%를 넘지 못하는 것을 보면, 아직까지는 해당 task에서 모델의 크기가 중요한 것 같다고 한다.
+
+위 표는 GPT-2에서 가장 신뢰도(Probability)가 높은 상위 1%를 뽑아 둔 것인데, 그 중 대략 63%의 정확도를 보였다. GPT-2는 open domain QA system보다 한참 부족하다.
+
+## Generalization vs Memorization
+dataset의 사이즈가 커짐에 따라 train-test 데이터 간의 겹침이 늘어나게 되고, 이는 곧 generalization 성능에 거품을 끼게 한다. 즉, Generalization이 아니라 Memorization(외워서)을 통해 결과를 내게 된다. 따라서 train-test 간 데이터가 얼마나 겹치는 지 분석하는 건 중요하다. 이를 위해 Bloom filter를 만들었다. Bloom filter는 WebText training set 토큰들의 8-gram들을 포함하고, lower-case로 전부 바꾸고 single space를 delimiter로 이용한다. 
+
+![6](../blogImage/6-6.png)
+
+Bloom filter를 dataset의 8-gram 표현들과 비교해서 얼마나 겹치는 지를 나타낸 것이 위의 표이다.
+
+전반적으로, WebText의 train-test 데이터 사이의 겹침 수준이 일반적인 train-test 데이터 사이에 비해 크지는 않지만 결과에 영향이 없지는 않았다. 
+
+![7](../blogImage/6-7.png)
+
+위 그래프에서 WebText의 train, test에서의 그래프가 유사하고, 모델 사이즈가 커질 때 둘 다 성능이 증가하는 것을 볼 수 있다. 이건 GPT-2가 아직 WebText에 underfitting 되어있고 개선될 여지가 더 있다는 것을 나타낸다.
+
+## Discussion
+GPT-2는 독해 능력 부분에서 다른 supervised baseline들과 견줄만큼의 성능을 보였지만, summarization 같은 다른 task들에서는 아직 기본적인 수준에 그쳤고 zero-shot의 성능도 아직 실제로 사용하기에는 무리가 있다고 한다.
+
+zero-shot 기반의 GPT-2가 여러 task에서 잠재성을 보여주었고, fine-tuning을 했을 때 그 한계가 어디인지 불분명하다. 저자는 앞으로 fine-tuning에 대한 연구를 계획 중이라고 한다. GPT-1에 비해 GPT-2의 training 양이 커졌는데 이게 BERT 논문에서 언급된 uni-directional한 특성을 극복할만큼 충분한지 확인하기 위해서 라고 한다.
+
+## Conclusion
+LLM을 충분히 크고 다양한 dataset으로 학습 했을 때, 여러 분야에 걸쳐서 좋은 성능을 보였다. zero-shot을 이용한 GPT-2는 8개의 dataset 중에서 SOTA 7개를 달성했다. 
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.
+

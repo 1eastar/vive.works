@@ -1,0 +1,157 @@
+---
+id: "20230321"
+slug: "/20230321"
+title: "Key-Value Memory Networks for Directly Reading Documents"
+description: ""
+author: "Vive Kang"
+date: "2023-03-21"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+기존의 large-scale Knowledge Bases(KBs: 여러 정보를 structured form으로 구조화 함)는 본질적인 한계가 있는데, 어쩔 수 없이 불완전한 면이 있고 고정된 스키마를 이용하기에 다양한 답변을 할 수 없다는 점이다. KBs에서 누락된 정보를 채워주기 위한 information extraction(IE)도 충분히 정확하지 않아서 위키피디아 같은 raw text, document의 정보를 모두 못 담아냈다. 결과적으로 KBs가 closed-domain problem을 어느정도 해낼 수 있었더라도, 스케일이 더 크고 어느 주제나 상관없는 general한 질문에 대한 답변은 불가능했다.
+
+text로부터 answer를 바로 찾는 건 KB를 이용하는 것보다 어려운데, raw text에서는 정보들이 특정 형식으로 구조화 되어있지 않고, 간접적이고 애매한 표현들도 많으며, 산발적으로 흩어져 있는 경우가 많이 때문이다. 
+
+이 논문에서는 Key-Value Memory Network(KV-MemNN)을 제안한다. KV-MemNN은 기존의 Memory Network를 일반화해서 직접적으로 정보를 이용할 수 있게끔 해준다. 모델은 question에 관련 있는 memory(정보)를 얻기 위해 key를 사용하는 방식을 학습한다.
+
+## Key-Value Memory Networks
+
+key-value paired memory는 컨텍스트(knowledge bases, documents)가 메모리에 저장되는 방식을 일반화한 것이다. Lookup(addressing) stage에서는 key memory를 사용하고, reading stage(결과를 출력)에서는 value memory를 사용한다. 
+
+이 방식은 두가지의 이점이 있는데, (1) 각 task의 중요한 지식들을 인코딩하는데 높은 유연함을 제공하고, (2) key-value 간의 복잡한(nontrivial) 변환을 통해 모델의 성능을 향상시킨다. key는 question과 관련이 있고, value는 response(answer)와 관련이 있다. 중요한 점은 SGD를 통한 back-propagation을 그대로 사용하면서 key-value transform을 통해 모델을 학습시킬 수 있다는 점이다.
+
+### Model Description
+
+End-to-End Memory Network를 기반으로 한다. 테스트 시 query(question)가 주어지며, 이 query를 이용해 메모리에서 반복적으로 주소를 지정하고 읽으며 답을 하기위한 정보를 찾는다(이러한 반복을 "hops"라고 한다). 각 step에서, 이렇게 찾은 정보는 원래 query에 누적되어 더해져서 다음 step을 위한 context를 구성한다. 마지막 context와 가장 최근의 query를 합쳐서 답변을 예측하기 위한 feature로 사용된다.
+
+![1](../blogImage/11-1.png)
+
+메모리에 주소를 지정하고 읽는 작업은 다음의 3 step으로 이루어진다. 각 step은 위 그림에서 빨간 글씨로 표시되어 있다.
+
+1. **Key Hashing**
+질문(question)을 이용해 가능한 몇가지 subset을 추려낸다. 이 과정은 질문과 적어도 1개의 단어가 겹치면서 frequency < 1000 인 key를 가진 $N$개의 메모리 후보를 추려내는 것이다.
+2. **Key Addressing**
+각각의 후보 메모리는 자신의 key와 질문을 비교해서 그 연관성에 대한 확률값을 할당받는다. 그 확률 식은 다음과 같다.
+    
+    $$
+    p_{h_i}=Softmax(A\phi_X(x)\cdot A\phi_K(k_{h_i}))
+    $$
+    
+    $\phi_i$는 $D$차원의 feature map, $A$는 $d \times D$ matrix이다.
+    
+3. **Value Reading
+’각 메모리의 연관성 확률값’과 ‘메모리의 value 값’의 weighted sum을 통해 output 벡터 $o$를 return 한다.
+    
+    $$
+    o=\sum_i p_{h_i}A\phi_V(v_{h_i})
+    $$
+    
+
+쿼리를 $q=A\phi_X(x)$의 형태로 사용하는 "controller" NN을 통해 위의 메모리 access process가 수행된다. controller NN의 output $o$를 이용해 쿼리가 $q_2=R_1(q + o)$로 업데이트 된다($R$은 $d\times d$ matrix, 위 그림의 $R_j$ 부분을 보면 $q$, $o$를 받아서 $q_{j+1}$을 출력한다.). 이 메모리 access 과정은 각 hop마다 다른 $R_j$ matrix를 이용해 hop 횟수 $H$ 만큼 반복한다(정확히 말하자면 hashing은 다시하지 않고, 2,3번 과정만 반복한다).
+
+2번의 식을 매 hop마다 적용되는 식으로 수정하면 다음과 같다.
+
+$$
+p_{h_i}=Softmax(q_{j+1}^{\top} A\phi_K(k_{h_i}))
+$$
+
+$H$번의 hop이 끝난 후 controller의 최종 state $q_{H+1}$은 가능한 candidate output $y_i$와 함께 예측 값을 계산한다. $y_i$는 KB의 모든 entities, WIKIQA의 모든 가능한 정답 후보들 등이 될 수 있다.
+
+$$
+\hat{a}=argmax_{i=1,...,C}Softmax(q_{H+1}^{\top}B\phi_Y(y_i))
+$$
+
+$d\times D$ matrix $B$는 $A$와 동일하게 만들 수도 있다. 설명한 모든 과정은 end-to-end로 학습된다. 모델은 $\hat a$와 $a$사이의 cross-entropy loss를 최소화해서 예측을 잘 할 수 있도록 반복적으로 access 하는 법을 학습한다. 즉, back-propagation과 SGD를 사용해 matrix $A, B, R_1,...,R_H$를 학습한다.
+
+hashing은 메모리 크기가 클 수록(메모리 안에 K-V pair가 많을수록) 연산 효율성을 위해 꼭 필요한 작업이다.
+
+### Key-Value Memories
+
+성능에 중대한 영향을 끼치는 key-value memory를 사용하는 다양한 방법이 있다. 사전 지식을 잘 인코딩하는 게 KV-MemNN에 중요하기 때문에, query, answer, keys, values 각각에 대한 feature map $\phi_X$, $\phi_Y$, $\phi_K$, $\phi_V$를 잘 설정해야 한다. 간단하게 $\phi_X$, $\phi_Y$는 bag-of-words representation으로 고정하고 $\phi_K$, $\phi_V$에 다양한 시도를 해보았다.
+
+**KB Triple**
+
+KB entry를 "subject *relation* object" 3가지 요소로 구성한다. 그리고 KB를 2배로 늘려서 "object *relation* subject" 순서의 entry 도 포함시켰다. 예를 들어, "Blade Runner *directed_by* Ridley Scott"와 "Ridley Scott ***!**directed_by* Blade Runner"가 있다(reverse entry에는 relation에 ! 포함). 이렇게 두 방향 다 가지는 것이 여러 종류의 질문에 대답을 더 잘하는 데 있어서 중요하다. 여기서 key는 subject와 relation이고, value는 object이다.
+
+**Sentence Level**
+
+document를 표현할 때, 문장 단위로 나누어서 각 메모리에 한 문장씩 인코딩해서 넣는 방식이다. key, value는 문장 전체를 bag-of-words로 인코딩한 값을 동일하게 갖는다. key==value 이기에 standard MemNN과 동일하다.
+
+**Window Level**
+
+document를 window size $W$ 크기의 단어로 split 한다. 각 window는 bag-of-words로 표현된다. window 전체를 key로 인코딩하고 value로는 window의 center word를 인코딩한다. window 전체는 질문에 매치되는 게 적합하고 center word는 답변에 매치되는 게 적합하다.
+
+**Window + Center Encoding**
+
+window 내의 단어들이 모두 동일하다고 여기는 bag-of-words 방식 대신, dictionary를 2배로 늘려서 center word랑 그 주위의 단어를 각각의 dictionary를 이용해 인코딩한다. 이 방식은 모델이 center word(정답에 관련)와 그 주변의 단어들(질문에 관련)의 연관성을 파악하는 데 도움을 준다. center word와 그 주변 word들을 다른 feature를 이용해 인코딩할 수 있다.
+
+**Window + Title**
+
+document의 title 그 자체가 보통 질문에 대한 답인 경우가 많다. 이때문에 key는 window를, value는 title인 방식을 사용했다. 이 pair만 사용한 것이 아니라 기존 Window-level representation(window, center word)과 함께 사용하는 것이기 때문에 메모리가 2배로 사용된다. 이 두 종류의 pair를 구분하기 위해 value 값에 따라 key 값에 "_window_", "_title_"를 넣어주었다. 이 방식은 dataset에 따라 사용할 수 없을 수도 있는데, 적절하고 의미있는 title을 갖고 있어야하기 때문이다.
+
+## The WikiMovies Benchmark
+
+WikiMovies benchmark는 영화에 대한 question-answer pair 로 구성되어 있다. 다음 2가지를 염두에 두고 만들어졌는데, (1) 학습을 위한 충분한 training example이 있어야 하고 (2) knowledge의 다양한 표현들에 대한 성능을 쉽게 분석할 수 있어야 하고, 질문 타입별로 결과를 분석할 수 있어야 한다.
+
+### Knowledge Representations
+
+![2](../blogImage/11-2.png)
+
+3가지 형태의 knowledge representation이 있다.
+
+1. **Doc**: raw Wikipedia document
+2. **KB**: *Open MovieDatabase(OMDb)*와 *MovieLens*로 부터 만들어진 entity와 relation들로 구성된 classical graph-based KB
+3. **IE**: Wikepedia로 부터 KB에 해당하는 부분을 Information extraction한 데이터
+document를 직접적으로 읽는 것 대신에, document → KB format으로 변환시키는 그 중간에 위치한 데이터이다. IE-KB representation은 보다 정확하고 간결한 표현, subject-verb-object grouping기반의 key-value pair라는 장점이 있다. 
+
+### Question-Answer Pairs
+
+![3](../blogImage/11-3.png)
+
+dataset의 전체 QA들을 질문을 기준으로 13개의 class로 나누었다. 자체적인 질문 set을 만들기도 했는데, 예를 들어, "What movies did Harrison Ford star in?" 라는 기존 질문에서 "What movies did [@actor] star in?" 이런 식으로 대체해 모든 actor에 대해서 반복해 질문할 수 있게끔 했다.
+
+## Experiments
+
+WikiMovies와 WikiQA에서의 여러 테스트들.
+
+### WikiMovies
+
+주요 목표는 아래 표의 4개의 learning method 하에서 KB, IE, Wikipedia(Doc)의 성능을 비교하는 것이다.
+
+![4](../blogImage/11-4.png)
+
+KV-MemNN을 이용한 것이 성능이 가장 좋았다.
+
+![5](../blogImage/11-5.png)
+
+구체적으로 메모미 representation을 어떻게 사용한 것이 좋은지에 대해 확인해봤는데, "Window-level + Center Encoding + Title" representation($H=2, W=7$)이 reading document directly(Doc)에서 가장 성능이 좋았다.
+
+**QA Breakdown**
+
+위의 Table 4처럼, 질문 타입에 따라 QA를 13개의 class로 분류해서 비교해보았다. KB, IE, Doc 각각 좋은 성능을 보이는 질문 타입이 달랐다. 특히 Tag 질문은 document 전체적으로 단어를 참조해야 하기 때문에 어려운 task였다. Movie에 대해 Writer/Actor를 묻는 질문은 document 전체에 답이 한두번 밖에 없을 수 있기 때문에 어려운 반면, Writer/Actor에 대해 Movie를 묻는 질문에 대한 답은 더 많기 때문에 쉬웠다.
+
+**KB vs. Synthetic Document Analysis**
+
+KB와 reading document directly의 차이를 더 잘 이해하기 위해, KB triple을 기반으로 synthetic Wikipedia document를 만들었다. 각 relation마다 실제 정보를 예측하기 위한 template phrase(최대 100개)를 가졌는데, 예를 들어 "BLADE RUNNER RELEASE_YEAR 1982"라는 KB 항목에 대해 "BLADE RUNNER came out in 1982"라는 template이 있는 것이다.
+
+![6](../blogImage/11-6.png)
+
+위 표처럼 KB와 다양한 방법을 비교했고, KB보다 성능이 떨어지는 원인을 찾고자 했다. Templates Sentence의 사용으로 성능이 떨어진 것은, 문장 형태로 표현된 template에서 subject, relation, object를 추출하기가 더 힘들기 때문이라고 한다. Coreference와 Conjunction은 거의 동일하게 성능에 안 좋은 영향을 끼쳤고, 둘 다 사용한 All Templates + Conj. + Coref.의 경우 인위적으로 만드는 conjunction과 coreference의 양이 너무 많았기 때문에 성능이 가장 안 좋았다고 말한다.
+
+### WikiQA
+
+WikiQA는 wikipedia를 knowledge source로 사용하는 dataset이며, 질문이 주어졌을 때 wikipedia로부터 가장 적절한 문장을 선택해 답변한다. 그 성능은 mean average precision(MAP)과 mean reciprocal rank(MRR)로 측정된다. 미리 만들어진 정보를 검색하는 step을 거쳐서 질문당 몇가지 후보 문장들을 제공한다.
+
+![7](../blogImage/11-7.png)
+    
+
+## Conclusion
+
+질문에 답하기 위해 directly reading document의 문제점에 대해 연구했고, direct method와 human-annotated/automatically-constructed KB 간의 차이에 집중했다. 그 차이에 브릿지 역할을 해주는 KVMNN을 제안했고 WikiMovies와 WikiQA에서 뛰어난 성능을 보였다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

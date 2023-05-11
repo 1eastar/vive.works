@@ -1,0 +1,125 @@
+---
+id: "20230412"
+slug: "/20230412"
+title: "PIQA: Reasoning about Physical Commonsense in Natural Language"
+description: ""
+author: "Vive Kang"
+date: "2023-04-12"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+일상의 object와 common concept들의 다양성으로 인해 labeling scheme을 적용할 수 없기 때문에, 대부분의 physical commonsense는 언어 그 자체로 표현된다. 그러나 reporting bias 문제(dataset이 real world의 event 전체를 대변할 수 없고, frequency나 distribution도 정확히 표현할 수 없다는 문제)때문에 "it is a bad idea to apply eyeshadow with a toothpick" 같은 어처구니 없는 사실은 직접적으로 report되지 않는다(dataset에 포함되어 있지 않다). 최근 large-scale pre-trained representation의 등장으로 abstract한 task와 domain에서 성공적인 모습을 보여주고 있지만, 여전히 physical commonsense knowledge에서는 제한적이다(physical commonsense knowledge가 종종 implicit하고 context-dependent하기 때문).
+
+이런 representation gap을 줄이기 위해, physical commonsense knowledge의 representation을 평가하는 **Physical Interaction: Question Answering (PIQA)**를 제안한다. PIQA를 만들기 위해, annotator들에게 semantic perturbations(word나 phrase의 약간의 수정을 통해 같은 의미를 가진 문장을 만드는 것)이나 syntactically and topically하게 physical knowledge와 유사하게 하는 방식으로 요청했다.
+
+1. physical commonsense에 대한 새로운 benchmark를 만들었다.
+2. large-scale pre-trained LM이 abstract한 task들에는 성공적이었지만 physical knowledge에 대해서는 그 성능이 약간 떨어졌다.
+3. real world의 디테일한 부분까지 포함하는 language representation을 만드는 게 목표이다.
+
+## Dataset
+
+PIQA benchmark는 질문 $q$에 대해 2개의 정답 후보 $s_1, s_2$가 있고 그 중에 하나를 모델 또는 사람이 선택하게 한다.
+
+### Instructables as a source of physical commonsense
+
+구체적인 physical reasoning을 요구하는 resource를 만들고자 하는데 [instructables.com](https://instructables.com)을 이용했다. 해당 웹사이트는 요리부터 자동차 수리까지 다양한 분야에 대해 crowdsourced instructions들이 모아져 있다. 대부분의 경우 각 step마다 이미지나 영상, 필요한 도구들을 포함한다. 
+
+이런 예시들을 seed로 사용해서 annotator들이 일상적인 object에 대해 다양한 사용법(일반적이지 않은 사용법까지)을 떠올릴 수 있게 했다. 이렇게 instructables.com으로부터 만든 QA pair는 task의 precondition이 무엇인지, postcondition이 무엇인지 명확하게 표현할 가능성이 높다.
+
+### **Collecting data through goal-solution pairs**
+
+![0](../blogImage/25-0.png)
+
+dataset을 Goal-Solution pair로 정의한다. Goal은 post-condition을 뜻하고 Solution은 goal을 달성하기 위한 절차를 뜻한다. goal이 구체적일 수록 annotator가 정답 보기들(정답, 오답)을 만들기 더 쉬웠다. annotator들이 더 창의적으로 생각하기를 원했고, 처음엔 annotator들에게 (task, tool) pair를 고려하게 했는데 그렇게 만들어진 dataset은 reporting bias가 가득했다. 사람들은 tool을 생각할 때 주방이나 차고에 있을 만한 도구들을 주로 생각했고 다양한 일반적인 object들(분필, 샤워 커튼 등)을 떠올리지 못했다.
+
+![1](../blogImage/25-1.png)
+
+따라서 object의 frequency distribution을 flatten하기 위해, instructables의 링크를 이용해 instruction을 직접 살펴보고 일반적이지 않은 요소들로 goal과 solution을 구성하게 했다. 그리고 solution을 변형해 미묘하게 invalid한 오답을 만들어내게 했다. 다양성을 위해 instructables의 6개의 카테고리를 annotator에게 제공했다(costume, outside, craft, home, food, workshop). 각 instruction 당 두 개의 example을 만들게 함으로써 하나만 빠르게 만들고 넘어가는 게 아닌 좀 더 깊게 생각하고 pre-condition이나 requirements를 깊게 고민하게 했다.
+
+low agreement를 받은 example들은 제외시켰는데, 특정 도메인에 대한 (상식의 범주가 아닌)전문적인 지식이 필요할 경우 올바른 example이라도 제외되었다. trick(오답)을 만들 때 오답인 걸 최대한 미묘하고 어렵게 만들기 위해 다양한 방법을 이용했는데, 정답과 단어 하나만 차이나게 바꾸는 경우도 종종 있었다. 그리고 linguistic trick(부정이나 숫자의 변화 등)과 핵심 action 또는 item을 비슷한 주제의 것과 바꾸는 방식을 동시에 사용했다.
+
+### Statistics
+
+dataset은 총 16K의 training QA pair + ~2K/~3K의 development/test set 으로 구성되었다. goal은 평균 7.8 words, solution은 평균 21.3 words이고 총 3.7M개의 lexical token으로 구성되어 있다.
+
+![2](../blogImage/25-2.png)
+
+위 plot은 정답(solution)과 오답(trick)의 sequence 길이를 비교한 것이고 큰 차이를 보이지는 않았다.
+
+그리고 vocabulary의 overlap도 비교해봤는데, 정답과 오답 사이의 overlap이 적어도 85%나 되었다.
+
+**Removing Annotation Artifacts**
+
+stylistic artifacts와 trivial examples를 제거하기 위해 AFLite를 사용한다. 즉, AFLite algorithm을 이용해 정답을 결정하는데 너무 직접적인 부분을 제거해주었다. 5000개의 example을 BERT-large를 fine-tuning하는 데 사용하고, 나머지 instance에 대해 embedding을 계산했다. 이후 random subset of data로 학습된 linear classifier 앙상블을 통해 이 embedding들이 정답에 대한 직접적인 indicator인지 판단했다. 구체적인 bias source를 찾아내는 방식 대신에 이 접근법을 통해 unsupervised data bias을 줄여줄 수 있다.
+
+## Experiments
+
+PIQA dataset을 sota natural language understanding model에 적용시켜 그 성능을 평가해보려 한다. GPT(124M), BERT-large(340M), RoBERTa-large(355M)를 이용하고, 각 모델에서 2-way classification의 best practice를 따랐다.
+
+모델에게는 goal, solution 선택지, special [CLS] 토큰을 주고, transformer의 마지막 layer에서 [CLS] 토큰의 hidden state에 linear transformation + softmax를 취해 solution A, B 각각의 확률을 approximate했다.
+
+### Results
+
+![3](../blogImage/25-3.png)
+
+일반적으로 다른 dataset에서는 GPT보다 성능이 좋음에도, PIQA dataset은 BERT에게는 불리한 구조를 갖고 있기 때문에 BERT의 성능이 더 낮다. GPT와 RoBERTa를 비교했을 때 RoBERTa의 학습 데이터 양이나 parameter 수가 더 많음에도 고작 8 point 밖에 차이가 안 났다.
+
+## Analysis
+
+PIQA에서 sota 모델이 어떤 것인 지 알아보고, top-performing model인 RoBERTa에서의 error에 대해 살펴본다.
+
+### PIQA as a diagnostic for physical understanding
+
+PIQA를 통해서 deep pre-trained LM의 내부 동작에 대해 살펴보고 LM의 physical knowledge 수준을 결정할 수 있다.
+
+**Simple concepts**
+
+physical world를 이해하기 위해서는 simple concept들(water, ketchup 등)에 대해, 그리고 다른 concept과의 interaction에 대해 이해해야 한다. PIQA가 common object간의 interaction에 대한 내용만 포함하고 있지만, solution pair 간의 string alignment를 통해 space of concept를 분석할 수 있다. single phrase만 다른 두 solution 선택지는 그 phrase에 대한 commonsense understanding을 테스트하는 것이다.
+
+- string alignment
+    
+    Performing a string alignment between solution pairs in the dataset can provide insights into the space of concepts represented in the questions and answers. String alignment is a technique used to find the best match between two strings by aligning them and assigning a score based on the similarity of their characters. In the context of PIQA, string alignment can be used to compare the solutions of different questions and identify patterns in the types of physical interactions and objects involved.
+    
+
+![4](../blogImage/25-4.png)
+
+![5](../blogImage/25-5.png)
+
+Figure 6 top은 solution 선택지 간의 edit distance를 나타낸다. 대략 60%의 solution 선택지들이 1-2 word edit을 가졌다. Figure 6 bottom에서는 dataset의 complexity가 solution pair 사이의 edit distance가 커질 수록 커진다는 걸 보여준다. 
+
+**Single-word edits**
+
+Figure 7의 plot은 single word만 다른 example로만 테스트한 RoBERTa의 accuracy를 나타낸다. 
+
+(q, s1, s2) example이 있을 때 특정 단어 $w$를 수정해서 s1 ↔ s2를 만든다. $w$를 선택할 때 training, validaion set에서 둘다 빈번하게 나타나는 단어들로 선택했는데, 이를 통해 자주 나타나는 단어를 더 많이 노출시켜서 모델 성능에 대한 신뢰도 높은 측정이 가능하게 했다.
+
+RoBERTa는 특정 flexible한 relation을 이해하기 힘들어 했다. 특히 Figure 7에서 보면 ‘before’, ‘after’, ‘top’, ‘bottom’에서 거의 찍은 수준의 정답률을 보여주었다.
+
+Figure 7에서의 concept들은 RoBERTa가 일반적이고 여러 의미로 사용되는 physical concept을 이해하기도 힘들어 했다. 반대로 특정 noun에 대해서는 더 잘 동작했다.
+
+![6](../blogImage/25-6.png)
+
+**Common replacements in PIQA**
+
+![7](../blogImage/25-7.png)
+
+‘water’, ‘spoon’, ‘freeze’ 3가지 example에 대한 replacement들을 나타냈다.
+
+‘water’는 training set에 많이 등장했지만 다양한 의미를 가지고 있는 단어라서 상당히 다양한 단어들로 대체되었다. 그러나 ‘spoon’은 그렇지 않았다. RoBERTa는 ‘spoon’에서 높은 accuracy를 얻었고 ‘water’에서는 그렇지 않았다. 이로써 여러 의미로 쓰일 수 있는 단어보다는 spoon 같은 단어를 더 잘 이해한다는 걸 알 수 있다.
+
+**Qualitative results**
+
+![8](../blogImage/25-8.png)
+
+위 figure 9을 볼 때, text로만 pre-train된 모델은 physical understanding이 어렵다고 한다(특히 commonsense object의 새로운 조합을 포함할 때).
+
+## Conclusion
+
+pre-trained LM들의 physical commonsense understanding 정도를 평가하는 benchmark인 **Physical Interaction: Question Answering(PIQA)** 를 제안한다. 가장 많이 이용되는 pre-trained LM들도 어느 수준의 기본적인 physical commonsense가 부족하다는 걸 발견했고, 이런 language representation의 발전과 그에 대한 insight 제공하는 것에 PIQA의 목적을 둔다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

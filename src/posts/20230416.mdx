@@ -1,0 +1,142 @@
+---
+id: "20230416"
+slug: "/20230416"
+title: "CommonGen: A Constrained Text Generation Challenge for Generative Commonsense Reasoning"
+description: ""
+author: "Vive Kang"
+date: "2023-04-16"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+최근의 commonsense reasoning에 대한 연구들(CommonsenseQA, SocialIQA 등)은 discriminative task에 집중한다. 즉, 여러 선택지 중에서 정답을 고르게끔 하는 방식이다. 이 논문에서는 generative commonsense reasoning에 대해 다루려고 한다. 
+
+사람은 문장을 구성하는 능력을 주변 환경으로부터 common concept을 이해하고 사용하는 법을 배움으로써 얻는다. 기계도 이런 generative commonsense reasoning 능력을 습득할 수 있을까? 이 연구를 시작하기 위해 CommonGen을 제안한다. CommonGen은 "concept-set"에 있는 concept으로부터 일상적인 장면을 묘사하는 문장을 만들어내야 하는 generation task이다.
+
+![0](../blogImage/28-0.png)
+
+예를 들어, Figure 1에서는 concept으로 \{ dog, frisbee, catch, throw \} 가 주어지고, "a man throws a frisbee and his dog catches it in the air." 같은 문장을 생성하도록 한다.
+
+이 task를 해결하기 위해서는 2가지 핵심 능력이 필요한데, (1) relational reasoning, (2) compositional generalization 이다. 문법적으로 완전한 문장이라도 항상 현실적인 건 아니다(즉, 상식에 반할 수 있다, 예를 들어, "a dog throws a frisbee …"). 그럴듯한 문장을 구성하기 위해선, 모델은 문법적인 걸 고려하는 동시에 주어진 concept들 간의 commonsense relation에 대해서도 파악해야 한다. 그리고 모델은 unseen concept에 대해 추론하는 compositional generalization 능력도 필요하다. 이 과정은 모델이 무한한 수의 새로운 concept의 조합을 추론하게끔 하기도 한다. 
+
+CommonGen task를 위해 35,141개의 concept-set과 연관된 77,449개의 sentence로 구성된 dataset을 만들었다. 여러 sota language generation model들에 대해서 automatic evaluation과 manual comparison을 수행했다. 최고의 성능을 보인 T5 모델은 SPICE metric(task가 얼마나 어려운 지 나타냄)에서 28.86%로 human performance 52.43%와 비교했을 때 상당한 차이를 보였다. 추가적으로, CommonGen task를 잘 하는 모델이 downstream task들에서도 좋은 성능을 보일 것이라고 한다. 
+
+## Task Formulation and Key Challenges
+
+CommonGen task를 수학적인 notation으로 표현해보려 한다. input은 unordered set of $k$ concept $x=\{c_1,c_2,...,c_k\} \in \mathbb{X}$(concept-set) 이고, 여기서 각 concept $c_i \in \mathbb{C}$(all concept vocabulary)는 common object(noun)이거나 action(verb)이다. 기대하는 output은 x에 있는 concept들을 이용해 만든 일상적인 상황을 묘사하는 문장 $y \in \mathbb{Y}$이다. $y$는 static situation일 수도 있고 짧은 연속된 action들이 될 수도 있다. 이 task의 고유한 challenge는 다음 2가지이다.
+
+**Relational Reasoning with Commonsense**
+
+generative reasoner는 많은 현실적인 것들 중에서 가장 그럴듯한 시나리오를 우선순위에 두어야 한다. 아래의 Figure 2처럼 모델은 주어진 concept과 관련있는 relational commonsense fact들을 떠올릴 수 있어야 하고, 문장을 만들어내기 위해 fact들을 이용해 최적의 composition을 추론해내야 한다. 시나리오를 완성하기 위해, generative commonsense reasoner는 추가적인 새로운 concept을 제3자 또는 주변 환경 등으로 이해하고 연관지어야 한다.
+
+![1](../blogImage/28-1.png)
+
+이는 concept들 간에 근본적인 commonsense relation을 이해하고 이 concept들을 이용해 globally optimal scenario를 구성해야 한다. 근본적인 reasoning chain은 spatial relation, object properties, physical rules, temporal event knowledge, social convention 등 다양한 배경 지식으로부터 나온다. 그러나 이런 지식들은 기존의 KB에는 포함되어 있지 않다.
+
+**Compositional Generalization**
+
+사람은 동시에 일어나는 걸 직접 본 적 없는 concept들이더라도 그 concept들에 대한 시나리오를 묘사할 수 있다. 예를 들어, Figure 2의 x = \{ pear, basket, pick, put, tree \} 에서 "pick"과 "basket"은 동시에 잘 나타나지 않는 concept들이다. 그러나 사람은 y = "a girl picks some pears from a tree and put them into her basket." 같은 상황을 묘사할 수 있다. 비유적으로, 유한한 concept의 무한한 활용을 뜻하는 compositionally generalization 능력은 기계가 하기 어렵다. 비슷한 개념을 추론할 수 있어야 하고(e.g. apple → pear) 잠재적인 연관성도 파악할 수 있어야하기 때문에 어렵다.
+
+## Dataset Construction and Analysis
+
+![2](../blogImage/28-2.png)
+
+Figure 3는 CommonGen task를 위한 data를 만드는 전반적인 flow를 보여준다. 
+
+### Collecting Concept-Sets from Captions
+
+너무 관련없는 임의의 concept들로 concept-set을 구성하는 건 부적절하다. 따라서 합리적으로 어느정도 일상에서 동시에 발생할만한 concept들로 concept-set을 구성했다. 이미지나 비디오 클립이 다양한 일상적인 장면을 담고 있기 때문에, 이미지나 비디오 클립의 caption text를 concept-set을 구성하기 위한 resource로 사용했다. 
+
+먼저, 각 문장의 단어들에 대해 POS tagging을 수행하고 ConceptNet의 vocabulary와 매칭했다. 그리고 3~5개의 concept으로 구성된 concept-set의 문장 수를 구했다. 즉, vocabulary 내의 3, 4, 5개의 concept의 조합에 대해, 각 concept 조합을 포함하는 문장들이 얼마나 많은지 파악했다.
+
+이상적으로, 이렇게 구성된 dataset 내의 concept-set 분포가 실제 세계의 concept-set 분포를 반영하기를 원했다. 따라서, scene diversity와 inverse frequency penalty에 기반해 concept-set $x$의 점수를 매기는 함수를 만들었다. 주어진 concept-set $\{c_1,c_2,...,c_k\}$을 포함하는 문장 집합을 $S(x)$라고 할 때 score function은 다음과 같다.
+
+![3](../blogImage/28-3.png)
+
+![4](../blogImage/28-4.png)
+
+$|S(x)|$ 는 concept $x$가 전부 포함된 문장의 수, 두번째 term은 그 문장들로 묘사된 장면의 다양성을 나타내는 값이고, 마지막 $\rho(x)$는 inverse frequency penalty를 뜻하는데, 구체적으로, maximum "set frequency(특정 concept이 여러 concept-set에 포함된 횟수)"를 갖는 $x$ set 안의 concept을 찾고, 역수를 취한 후 nomalization을 위해 모든 concept-set의 수를 곱해준다. 이 penalty를 통해 highly frequent concept에 대한 bias를 효율적으로 통제할 수 있다. 이렇게 구한 각 concept-set의 score 분포를 통해 다음 step을 위한 candidate example을 샘플링한다.
+
+### Crowd-Sourcing References via AMT
+
+crowdworker를 통해 2500개의 concept-set으로 10,060개의 reference를 만들었다. low-quality worker를 필터링하기 위해 3가지의 기준을 사용했다. (1) POS tagging 능력, (2) GPT-2에서 테스트했을 때 perplexity 정도, (3) 어떤 commonsense fact를 이용한 건지 rationale sentence를 작성하게 했는데, 이 rationale의 길이.
+
+### Permutation-Invariant Annotating
+
+annotator에게 주어지는 input인 concept-set에서 concept들의 순서가 미치는 영향에 대해 걱정했다. 따라서, input concept order와 reference concept order를 비교해본 결과 96.97%의 reference에서 그 순서가 다른 걸 발견할 수 있었다. 
+
+그리고 더 구체적으로, Spearmans’ rank correlation coefficient를 사용해서 비교해봤는데, 전체 input-reference pair에서 -0.031의 값이 나왔고 이는 concept의 순서가 별 관련이 없음(permutation invariant)을 시사한다. 
+
+### Finalizing Adequate References
+
+다른 crowdworker들에게 똑같은 concept-set으로 reference를 만들도록 했다(concept-set 하나 당 하나 이상의 scene을 담고 있다). 그러고는 SentenceBERT를 통해 이렇게 만들어진 reference들간의 cosine similarity를 구했다. 한 example에 대해 $k$개의 reference가 있다면 총 $k(k-1)/2$개 pair의 cosine similarity 값을 구하는 것이다. 이 값들의 median 값을 사용했다.
+
+이 방식에서, 높은 similarity 값을 갖는 reference들이 있다면 이 reference들은 example의 reference로 사용하기 적절한 것이다. 아래 표에서 한 example에 5개의 reference가 있을 때 수렴하는 모습을 보였고 따라서 5개의 reference가 있으면 적절하다고 판단했다.
+
+![5](../blogImage/28-5.png)
+
+### Down-Sampling Training Examples
+
+compositional generalization 능력을 평가하기 위해, 남은 candidate concept-set에 대해 dow-sampling해서 distantly supervised training dataset을 만들었다(즉, scene의 caption sentence를 human reference로 사용했다). final data의 통계는 다음과 같다.
+
+![6](../blogImage/28-6.png)
+
+### Analysis of Underlying Common Sense
+
+connectivity와 relation type에 대한 연구를 위해 ConceptNet을 통해 dataset을 분석했다.
+
+**Connectivity Distribution**
+
+만약 concept-set 안의 두 concept이 KG상에서 더 많이 연결되어 있다면 이걸 이용해 scenario를 작성하기 더 쉬울 것이다. 5 size concept-set에는 총 10개의 concept pair가 있을 수 있다. 
+
+![7](../blogImage/28-7.png)
+
+1-hop connection을 보면 60%정도의 5 size concept-set이 1개 이하의 pair link를 가졌다(10개 pair 중에 1개 이하의 connection). 반면 2-hop connection에서는 50% 가량이 almost fully connected 였다. 이 점으로 볼 때, CommonGen은 적당한 난이도를 갖는 것 처럼 보인다. concept들 간에 너무 멀지도, 너무 가깝지도 않기 때문에 input(concept-set)도 너무 어렵거나 쉽지 않다.
+
+**Relation Distribution**
+
+![8](../blogImage/28-8.png)
+
+이 connection들의 relation type의 빈도수를 확인했다. 이 distribution을 5개의 major 카테고리로 분류해서 아래 표로 나타냈다.
+
+![9](../blogImage/28-9.png)
+
+## Methods
+
+CommonGen task를 테스트할 baseline methods(models)를 간단히 소개한다.
+
+**Encoder-Decoder Models**
+
+**Non-autoregressive generation**
+
+**Pre-trained Language Generation Models**
+
+## Evaluation
+
+### Metrics
+
+BLEU, ROUGE, METEOR 같은 automatic metrics와 concept "Coverage(lemmatizatized output에 input concept들이 나타나는 비율)"를 측정했다.
+
+추가로, captioning task에 특화된 CIDEr, SPICE 같은 metrics도 사용했다. 이것들은 system generation과 human reference가 비슷한 concept을 사용한다는 가정하에 n-gram overlap 비교 대신에 언급된 concept간에 연관성을 평가한다. 
+
+각 metric에서 human performance를 추정하기 위해 각 reference에 대해 다른 모든 reference와 비교했고 이는 각 metric에 대해 inter-annotator agreement를 계산한 것과 동일하다. 
+
+### Experimental Results
+
+Automatic Evaluation
+
+![10](../blogImage/28-10.png)
+
+아래쪽의 pre-trained 모델들이 non-pre-trained 모델들보다 성능이 뛰어났다. UniLM, BART, T5같은 pre-trained 모델의 성능이 대체적으로 좋았고 coverage에서 BART의 성능이 가장 좋았는데, 이를 통해 pre-trained 모델을 더 발전시키는 것이 generative commonsense에 대한 좋은 방향이라는 걸 알 수 있다.
+
+**Manual Evaluation**
+
+![11](../blogImage/28-11.png)
+
+작성 중..
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

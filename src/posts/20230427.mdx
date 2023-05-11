@@ -1,0 +1,174 @@
+---
+id: "20230427"
+slug: "/20230427"
+title: "Improving Neural Machine Translation Models with Monolingual Data"
+description: ""
+author: "Vive Kang"
+date: "2023-04-27"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+parallel data만으로 학습시킨 Neural Machine Translation(NMT)은 여러 language pair에서 sota를 달성했다. 
+
+monolingual data로 학습된 LM은 Statistical Machine Translation(SMT)에서 중요한 역할을 한다. 그 이유는 첫째로 word-base나 phrase-base translation 모델은 강한 independence assumption(translation unit의 확률이 context와 무관하게 추정됨)을 갖지만 LM은 다른 independence assumption으로 translation unit들이 서로 잘 맞아 떨어지도록 설계된다는 점이다. 둘째로, 사용 가능한 monolingual data의 양이 parallel data의 양보다 훨씬 많다는 점이다.
+
+- **parallel data**
+    
+    같은 의미를 지닌 여러개의 언어의 set으로 구성된 데이터
+    
+
+NMT의 (attentional) encoder-decoder 아키텍쳐에서, decoder는 필수적으로 RNN LM(context를 고려함)의 형태를 갖기에 위의 첫번째 이유처럼 LM을 추가할 필요가 없다. 그러나 두번째 이유는 여전히 유효한데, parallel data가 많지 않고 translation task에 적합하지 않는다면 monolingual data가 더 도움이 될 것이라고 예상한다.
+
+따로 학습된 RNN LM을 NMT 모델과 합치는 이전 연구 방식과는 다르게, 이런 아키텍쳐에서의 변화 없이 monolingual data로 학습시키는 방식을 연구했다. 이 방식은 여러 다른 NMT 아키텍쳐에서 모두 사용할 수 있다. 
+
+**Main contribution**
+
+- monolingual target data를 training set으로 사용함으로써 NMT 시스템의 translation 퀄리티를 높였다.
+- source side monolingual training data를 모으는 두가지 방법이 있는데, dummy source sentence를 사용하는 방식과 back-translation으로 얻은 source sentence를 사용하는 방식(synthetic이라고 부름)이다. 후자의 방식이 더 효과적이었다.
+- NMT 모델을 monolingual data 또는 paralle in-domain data로 성공적으로 fine-tuning할 수 있었다.
+
+## Neural Machine Translation
+
+기존의 neural machine translation 아키텍쳐를 기반으로 연구를 진행했다. RNN을 포함한 encoder-decoder network로 구성했다.
+
+encoder는 GRU를 이용한 bidirectional NN으로 input sequence $x=(x_1,...,x_m)$을 입력받고 forward hidden state sequence $(\overrightarrow{h}_1,...,\overrightarrow{h}_m)$과 backward hidden state sequence $(\overleftarrow{h}_1,...,\overleftarrow{h}_m)$를 계산해서 vector $h_j$($\overrightarrow{h}_j, \overleftarrow{h}_j$의 concat)를 구한다.
+
+decoder는 RNN으로 구성되어 있고 target sequence $y=(y_1,...,y_n)$을 예측한다. 각 $y_i$는 recurrent hidden state $s_i$, 이전 예측 값 $y_{i-1}$, context vector $c_i$를 통해 예측한다. $c_i$는 $h_j$의 weighted sum으로 구하며, 각 $h_j$의 weight는 $y_i$가 $x_j$와 align될 확률을 구하는 모델인 alignment model을 통해 구한다. alignment model은 1-layer FFNN으로 구성된다.
+
+학습은 parallel corpus로 진행했고 translation에는 작은 beam size를 이용한 beam search를 이용했다.
+
+## NMT Training with Monolingual Training Data
+
+machine translation에서 monolingual data를 더 많이 이용했을 때 성능 향상이 있었다. monolingual data로 다른 LM들을 학습시키고 간단한 과정을 통해 NN으로 통합했던 이전 연구들과는 다르게, encoder-decoder NN 방식을 사용하면 context에 대한 정보를 알 수 있기 때문에 메인 NMT 모델을 monolingual data로 학습시키는 방식을 제안한다. 
+
+이를 위한 2가지 전략을 소개할텐데, (1)empty(or dummy) source sentence, (2) synthetic source sentence이다.
+
+- **synthetic source sentence**
+    
+    target sentence를 source language로 자동 번역해서 얻은 sentence. back-translation이라 부름.
+    
+
+### Dummy Source Sentences
+
+첫번째 전략은 monolingual data를 source side가 비어있는 parallel data로 여기는 것이다. 이러면 network는 이전의 target words에만 의존해서 답을 예측하게 되는데, 이건 일종의 dropout로도 볼 수 있다. 그리고 이 세팅을 multi-task learning으로도 볼 수 있는데, source를 알지 못할 때의 translation task와 source를 알지 못할 때의 language modeling task 2개의 task로 볼 수 있다.
+
+parallel data와 monolingual data를 1:1 비율로 랜덤으로 섞은 후 학습시켰다. monolingual data의 source side에는 single-word \< null \>을 넣어줘서 하나의 network에서 둘 다 학습할 수 있도록 했고, monolingual data를 학습할 때는 encoder의 parameter를 freeze 해두었다.
+
+이런식으로 monolingual data를 사용하면 monolingual data의 비율을 높여서 학습하거나 monolingual data만을 가지고 fine-tuning할 수 없었는데, network가 monolingual data의 비율이 높으면 source context에 대한 학습을 제대로 하지 않았기 때문이다.
+
+### Synthetic Source Sentences
+
+output layer가 source context에 대해 sensitive하고 monolingual data로부터 좋은 paramter를 학습시키기 위해서, monolingual target text를 source language로 automatic translation을 거쳐 만든 source sentence를 source context로 사용하도록 한다.
+
+훈련할 때, 이렇게 synthetic하게 만든 parallel text와 human-translated parallel text를 섞고 이 둘을 구분하지 않았다. 즉, network parameter를 freeze하지 않았다. 여기서 중요한 점은 source side만 synthetic한 것이고 target side는 monolingual corpus에서 가져왔다는 점이다.
+
+## Evaluation
+
+parallel text로 학습한 NMT와 monolingual data까지 학습한 NMT를 English ↔ German(WMT 15) English → German(IWSLT 15), Turkish → English(IWSLT 14)에 대해 평가했다.
+
+**English ↔ German**
+
+![0](../blogImage/30-0.png)
+
+English → German 실험을 위해, German monolingual data에서 3,600,000개의 임의의 샘플을 뽑아서 back-translation 했다. German → English 실험을 위해서는 4,200,000개의 back-translation을 했다. 
+
+**Turkish → English**
+
+![1](../blogImage/30-1.png)
+
+WIT, SETimes는 parallel corpus이고, 아래의 Gigaword에서 3,200,000개의 back-translation을 통해 synthetic data를 만들었다.
+
+데이터의 양이 적어서 overfitting이 큰 문제였다. 따라서 output layer에 가우시안 노이즈와 dropout을 사용했고, BLEU score를 기반으로 early stopping을 사용했다.
+
+### Results
+
+**English → German WMT 15**
+
+![2](../blogImage/30-2.png)
+
+parallel data와 dummy source sentences를 함께 사용했을 때 0.4-0.5 BLEU score가 상승했고, 여기서 앙상블을 이용했을 때 1 BLEU score까지 상승했다.
+
+synthetic data를 추가했을 땐 훨씬 효과적이었다. 2.8-3.2 BLEU score가 상승했다. 앙상블보다는 single system의 상승폭이 더 컸다.
+
+**English → German IWSLT 15**
+
+![3](../blogImage/30-3.png)
+
+WMT는 뉴스 텍스트이고 IWSLT는 TED 강연 내용이다. WMT로 학습된 모델이 다른 장르의 데이터에도 잘 적응하는지 테스트했다.
+
+1번과 2번은 table 3에 나와있는 WMT로만 학습된 모델이다. 4번 시스템을 보면 적은 synthetic data로 fine-tuning을 했을 뿐인데 그 성능이 1.2 BLEU score나 상승했음을 볼 수 있다. 반면 WIT(TED 강연) dummy data로 fine-tuning했을 때는 성능 향상이 없었다(3번 시스템). 
+
+시스템 5번에서는 실제 WIT의 training data를 이용해 fine-tuning 했을 때의 결과인데, 당연히 이 결과가 가장 좋다. 하지만 monolingual data를 이용한 NMT domain adaptation 또한 나쁘지 않은 결과가 나왔음에 의의가 있다.
+
+**German → English WMT 15**
+
+![4](../blogImage/30-4.png)
+
+back-translation을 통해 3.6-3.7 BLEU score의 상승이 있었다.
+
+**Turkish → English IWSLT 14**
+
+![5](../blogImage/30-5.png)
+
+dummy source를 사용했을 때 분산은 크지만 평균적으로 0.6 BLEU score가 상승했다(baseline vs. Gigaword_mono). synthetic source(Gigaword_synth)를 사용했을 땐 평균 2.7 BLEU score가 상승했다. 
+
+추가적인 새로운 데이터 없이 synthetic data가 얼마나 regularization 효과를 갖는지 보기 위해, parallel data의 target side를 back-translation해서 parallel_synth를 측정했다. 1.7 score 향상이 있긴 했지만 Gigaword_synth 보다 성능이 낮았는데, 이로써 같은 도메인의 새로운 데이터가 더 성능 향상에 도움이 된다는 걸 알 수 있다. 
+
+**Back-translation Quality for Synthetic Data**
+
+automatic back-translation의 퀄리티가 synthetic data를 학습하는데 얼마나 영향을 끼칠까? 3가지 다른 시스템을 통해 German monolingual corpus를 English로 back-translate 했다.
+
+- baseline system + greedy decoding
+- baseline system + beam search(beam size 12). Table 3에 사용한 시스템과 같다.
+- synthetic data로 학습된 German → English system
+
+![6](../blogImage/30-6.png)
+
+DE → EN은 back-translation에 대한 BLEU score이고, EN → DE는 그 결과를 이용해 학습한 시스템의 결과이다. back-translation에서 3가지 시스템간의 결과는 최대 6 score로 상당히 차이가 났고 이를 이용해 실제 모델에 학습했을 경우 0.6-0.7 BLEU의 차이가 났다.
+
+### Contrast to Phrase-based SMT
+
+![7](../blogImage/30-7.png)
+
+monolingual data를 back-translation해서 synthetic parallel data로 만드는 방식은 이전의 phrase-based SMT에서도 연구된 적 있다. 기술적으로 유사하긴 하지만 NMT에서는 새로운 역할을 한다.
+
+table 8을 보면, phrase-based SMT에서는 WMT test set에서는 +0.7 BLEU로 적당한 성능을 보였지만 IWSLT에서는 거의 그대로였다. 이는 phrase-based SMT의 back-translation의 주요 효과는 domain adaptation임을 보여준다.
+
+반면 NMT의 back-translation에서는 synthetic parallel data의 효과가 domain adaptation하지 않다는 걸 보여준다. out-of-domain에서도 많은 성능 향상을 보였다. 
+
+phrase-based SMT에서는 주로 domain adaptation의 효과가 있었던 back-translation이 NMT에서는 beyond domain adaptation에서의 좋은 효과를 보였다.
+
+### Analysis
+
+앞서 baseline(Turkish → English)에서 overfitting이 문제라고 언급했는데(특히 적은 데이터에서 regularization을 했음에도 불구하고), Figure 1에서 overfitting을 볼 수 있다.
+
+![8](../blogImage/30-8.png)
+
+parallel data로만 train할 때 빠르게 overfit되는 걸 볼 수 있다. 반면, 3개의 monolingual dataset(parallel_synth, Gigaword_mon, Gigaword_synth)은 overfitting이 딜레이되고 dev set에서 더 낮은 ppl을 보여주었다.
+
+![9](../blogImage/30-9.png)
+
+English → German 데이터는 많기 때문에 40M까지 overfitting의 조짐이 보이지는 않는다. synthetic 시스템에서 train보다 dev set에서 더 낮은 cross-entropy를 보이는데 이는 앞선 domain adaptation으로 설명할 수 있을 것 같다.
+
+한가지 중요한 이론적인 예상은 monolingual target-side data가 모델의 fluency를 향상시킨다는 점이다. sentence-level에 앞서 word-level fluency에 대해 조사했는데, 구체적으로 subword unit의 sequence로 구성된 단어들에 대해서 다룬다. 그리고 추가적인 monolingual data로 학습한 NMT 시스템이 더 자연스러운 단어를 생성하는지 조사했다. 예를 들어, 영어 "civil rights protections"를 3개의 subword unit "Bürger | rechts | schutzes"으로 번역했고 이 multi-unit words가 얼마나 잘 번역된 German word인지 분석했다.
+
+subword unit으로 생성된 단어에서 parallel training corpus에는 없는 단어의 수를 셌다. 그리고 annotator에게 자연스러운지 평가하게 했다.
+
+![10](../blogImage/30-10.png)
+
+그 결과 +mono와 +synthetic에서 parallel data에 없는 새로운 단어의 비율이 높았고 annotator에 의해 더 자연스럽다고 평가받았다. 따라서 additional monolingual data가 NMT 시스템의 (word-level) fluency를 향상시킨다는 예상을 뒷받침한다.
+
+## Conclusion
+
+network의 구조 변화없이 NMT 시스템을 monolingual data를 이용해 학습시키는 2가지 방법에 대해 소개했다. dummy source 방식은 어느정도는 좋은 모습을 보이기도 했지만 모든 task에서 상당한 향상을 보이고 새로운 sota를 달성한 monolingual target data의 back-translation 방식이 더 효과적이었다. 또한 적은 양의 back-translated in-domain data가 domain adaptation에 효과적이고, overfitting을 줄여주며, fluency를 향상시킨다는 걸 확인했다.
+
+논문에서의 실험은 전부 적은 양의 synthetic parallel data를 사용했기에, 많은 양을 사용하면 더 큰 성능 향상이 있을 거라 기대한다. 
+
+NN 아키텍쳐 구조를 건드리지는 않았기에 다른 NMT 시스템에 쉽게 이 방식을 적용 가능하다. 이 접근법은 back-translation을 사용하는 MT 시스템의 퀄리티와 parallel data, monolingual data의 양, baseline model의 overfitting 정도에 따라 그 효과가 다양할 것이다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

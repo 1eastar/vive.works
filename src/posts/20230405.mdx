@@ -1,0 +1,159 @@
+---
+id: "20230405"
+slug: "/20230405"
+title: "ConceptNet 5.5: An Open Multilingual Graph of General Knowledge"
+description: ""
+author: "Vive Kang"
+date: "2023-04-05"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+### Background
+
+- distributional semantics
+word embedding은 마스킹 토큰 예측 같은 task를 처리하면서 자연스럽게 side-effect로 종종 만들어지는데 이를 distributional semantics라고 한다.
+
+## Motivation & Introduction
+
+ConceptNet은 words와 phrases($terms$)를 labeled, weighted edges($assertions$)로 연결하는 knowledge graph이다. 단어들 간의 relation을 다음과 같이 나타낸다.
+
+![0](../blogImage/20-0.png)
+
+이 논문에서는 assertion들을 triples로 표현한다.
+
+ConceptNet의 graph-structured knowledge는 word embedding을 이용하는 NLP learning에서 유용하다. ConceptNet을 통해 semantic space를 만들 수 있는데, 이는 distributional semantics만 이용했을 때보다 훨씬 좋은 성능을 보인다. 가장 좋은 semantic space는 distributional semantics와 ConceptNet을 동시에 이용해 학습한 것이다. 논문에서는 이 hybrid한 semantic space를 구별하기 위해 "ConceptNet Numberbatch"라고 부른다.
+
+ConceptNet Numberbatch는 다른 word relatedness를 평가하는 다른 시스템들보다 성능이 좋은데, 이는 downstream task에서의 성능 향상으로 이어진다.
+
+## Structure of ConceptNet
+
+### Knowledge Sources
+
+ConceptNet은 다음의 source들로부터 만들어졌다.
+
+![1](../blogImage/20-1.png)
+
+ConceptNet은 21M 개의 edge, 8M개의 node를 포함한다. 영어만 봤을 때 대략 1.5M 개의 node가 있고, 10K 이상의 node를 가진 언어가 83개 포함되어 있다. 
+
+### **Relations**
+
+$IsA, UsedFor, CapableOf$ 같은 closed class of selected relation을 사용한다. 36개의 core relation을 이용하고, 각 edge들은 direction을 갖고 있다. $SimilarTo$ 같은 몇몇 relation은 symmetric한 특정을 갖고 있는데, 이 경우에는 edge의 direction이 중요하지 않다.
+
+![2](../blogImage/20-2.png)
+
+특별한 의미를 갖는 relation에는 보통 common word가 연결되고, rarer word에는 보통 general한 relation이 연결되는 경향이 있다.
+
+### Term Representation
+
+ConceptNet에서는 terms를 표준 형식(URI)으로 나타낸다. 예를 들어, 영어 term "United States"는 **/c/en/united_states** 로 표현된다. 
+
+relation은 URI prefix **/r** 이 붙는다. **/r/UsedFor** 같은 형식이다.
+
+이전 버전(ConceptNet 5.4)과의 가장 큰 차이점은 lemmatize를 하지 않는다는 점이다. 기존에는 "United States"는 **/c/en/united_state** 로 표현되었고 "drive"와 "driving"이 같은 term으로 취급되었다. ConceptNet 5.5에서는 lemmatize를 없애고 $FormOf$ relation으로 대체했다. (driving, FormOf, drive)와 같은 형식의 third assertion으로 연결된다.
+
+### Vocabulary
+
+KG에서는 node가 어떤 걸 나타내는 지에 따라 graph가 사용되는 방식이 달라진다. 그리고 이 node들은 어떤 resource를 사용했는 지에 따라 달라진다.
+
+ConceptNet에서 node는 word or phrase이다. 그리고 여기서 각 단어는 속해있는 context에 맞는 하나의 의미가 아니라 그 단어의 모든 가능한 의미를 담고 있는 형태(undisambiguated form)로 나타난다. 따라서 여러 의미를 갖는 단어는 다양한 의미로 관계(relation)가 형성되고 자연어의 본질적인 ambiguity를 제대로 이해할 수 있게끔 한다.
+
+ConceptNet은 term을 disambiguity하게 나타내는 버전도 포함한다. 예를 들어, 여러 의미를 지닌 "lead"같은 경우 **/c/en/lead/n** 은 lead의 명사(noun) 버전을 의미하고 효율적인 검색을 위해 URI **/c/en/lead** 에도 포함된다.
+
+### Linked Data
+
+WordNet 같은 다른 시스템에서 knowledge를 가져와 사용할 때는 ConceptNet에 맞게 alignment가 필요하다. 이 때 ConceptNet term은 absolute URL로 표현하는데, 이로써 ConceptNet과 Linked open data 간에 이어준다.
+
+### **Applying ConceptNet to Word Embeddings Computing ConceptNet Embeddings Using PPMI**
+
+ConceptNet graph는 sparse하고 symmetric한 term-term matrix로 표현가능한데, 각 cell은 2개의 term을 연결하는 모든 edge weight의 총합이다. matrix를 만들 때 연산량을 줄이기 위해 3개 이하의 edge가 연결된 term은 제외했다.
+
+이 matrix가 term들과 각각의 context에 대한 정보를 나타낸다고 생각한다. 그리고 ConceptNet-PPMI라고 부르는 word embedding matrix를 제공한다. 이 embedding은 implicit하게 ConceptNet graph의 전반적인 구조를 나타내고 두 개의 node(term) 간에 대략적인 connectedness도 알려준다.
+
+### Combining ConceptNet with Distributional Word Embeddings
+
+ConceptNet에서 얻은 embedding과 text로부터 학습된 distributional word embedding을 동시에 사용해서 더 robust한 embedding을 만들고자 했다.
+
+"Retrofitting"은 KG를 이용해 word embedding matrix를 조정하는 과정을 뜻한다. ConceptNet에 retrofitting을 적용함으로써 multilingual connection의 이점을 얻을 수 있다. 영어 term과 그에 맞는 다른 외국어 term을 통해 영어 뿐만 아니라 외국어에 대한 유용한 embedding을 학습할 수 있다.
+
+기존의 Retrofitting에서 벡터들의 평균값을 retrofitting 결과에서 빼주는 과정을 추가해주었다. retrofitting은 아주 많이 연결된 term인 "person" 같은 term쪽으로 모든 벡터를 가깝게 하려는 경향이 있기 때문이라고 한다. 따라서 평균값을 빼줘서 각 term들이 서로 구별가능하도록 했다.
+
+### **Combining Multiple Sources of Embeddings**
+
+retrofitting은 학습 데이터에 접근하지 않고 word embedding matrix에 적용할 수 있다. 이 점은 input data가 unavailable하거나 얻기 힘들 때에도 word embedding matrix를 사용가능하게 해준다.
+
+word2vec, GloVe는 pre-trained matrix를 제공한다. 이 두개의 matrix는 다른 domain의 text를 나타내기 때문에 이 두가지를 모두 사용해서 이점을 얻고자 했다.
+
+word2vec과 GloVe matrix에 retrofitting을 적용한 후 이 둘의 공통 vocabulary에 대한 linear projection을 찾았다. matrix의 column들을 concat하고 SVD를 이용해 300차원으로 줄이는 과정을 통해 projection matrix를 찾았고 이 projection을 이용해 한쪽에는 없는 term을 추론해냈다.
+
+이후 non-English text에 대한 distributional word embedding을 추가했고(merging) 이는 multilingual performance를 향상시켰다.
+
+retrofitting과 merging까지 하면 word2vec, GloVe, pruned ConceptNet graph의 vocabulary로부터 얻은 word embedding matrix를 얻을 수 있다.
+
+## Evaluation
+
+더 좋은 embedding이 semantic downstream task에서 더 좋은 성능으로 이어지는 지 평가하기 위해, 각 embedding에서의 word relatedness를 먼저 비교한 후 downstream task에 적용하여 비교해보았다.
+
+ConceptNet과 distributional semantics를 동시에 이용한 ConceptNet Numberbatch를 다른 word embedding들과 비교한다. 그 대상은 다음과 같다.
+
+![3](../blogImage/20-3.png)
+
+### Evaluations of Word Relatedness
+
+semantic space의 본질적인 성능을 평가하는 방법은 한 쌍의 단어에 대해 relatedness를 구하게 하고 사람의 결과와 비교하는 것이다. 
+
+### Solving SAT-style Analogies
+
+proportional analogy는 a1이 b1이면 a2는 b2이다 같은 문장을 뜻한다. word embedding 상에서의 analogy task 방식은 b2-a2와 b1-a1을 비교하는 것이다. 그러나 이런 단순한 비교보다는 a1:b1이 있고 a2:??를 찾을 때 좀 더 디테일한 비교를 하는 게 best pair를 찾는 데 이점이 있다. 
+
+analogy의 한쪽 단어는 다른 쪽 언어와 어떤 방식으로든 연관되어 있으므로 논문에서는 a1, a2 / b1, b2의 relatedness 정도에 초점을 둔다. 또, 많은 경우 적절한 analogy는 a1이 a2이면 b1은 b2이다 라는 문장 또한 성립한다. 따라서 (a2, b2)가 best pair인지 평가하기 위해 3가지 요소를 고려하는데, 식으로 표현하면 다음과 같다.
+
+$$
+s=(a_1\cdot a_2+b_1\cdot b_2)+ w_1(b_2-a_2)\cdot(b_1-a_1)+w_2(b_2-b_1)\cdot(a_2-a_1)
+$$
+
+$w_1,w_2$는 테스트하는 system에 맞게 각각 최적화해서 이용했다. grid search를 통해 system이 최고의 성능을 낼 수 있는 parameter를 사용하도록 했다. ConceptNet Numberbatch에서는 $w_1=0.2, w_2=0.6$이 최적의 값이었다. 이 값을 통해 알 수 있는 건 a1, b1 / a2, b2 이렇게 비교하는 것 보다 b2, b1 / a2, a1 이렇게 transpose된 analogy의 비교가 더 중요하다는 점이다.
+
+### An Evaluation of Common-Sense Stories
+
+Story Cloze Test는 간단한 story의 그럴듯한 ending을 예측하는 semantic understanding task이다. prompt로 4개의 이야기 문장을 입력하고 5번째 문장으로 어떤 문장이 맞을 지 선택하게끔 선택지 2개를 준다. 이 task는 사람에게는 쉽지만 컴퓨터가 해결하기에는 어려운데, implicit하고 common sense knowledge에 의존한 내용이기 때문이다. 따라서 예전의 시스템들은 랜덤 선택인 50%의 확률을 겨우 넘었고 사람은 거의 100%로 잘 맞췄다.
+
+## Results and Discussion
+
+### Word Relatedness
+
+![7](../blogImage/20-7.png)
+
+앞쪽 4개에의 평가 항목에서는 Y축은 Spearman correlation이고 뒤쪽 2개는 accuracy 값이다. ConceptNet Numberbatch만 정리한 표는 다음과 같다.
+
+![4](../blogImage/20-4.png)
+
+6개 평가 항목 중에서 4개 부분에서 CCNN이 sota를 달성했다.
+
+### SAT Analogies
+
+SAT Analogies 에서는 CCNN이 가장 좋은 성능을 보였다. 
+
+![5](../blogImage/20-5.png)
+
+"Solving SAT-Style Analogies"에 소개된 다른 시스템들과 비교한 표다. SuperSim, LRA, CCNN의 결과는  서로가 서로의 95%의 confidence interval에 포함되어 있기 때문에 어떤 것이 더 나은지는 질문에 따라 쉽게 바뀔 수 있다. 
+
+![6](../blogImage/20-6.png)
+
+이 부분에서 knowledge-informed word embedding과 non-word embedding이 각각 뭐를 지칭하는 지 제대로 파악이 안 됨.
+
+### Story Cloze Test
+
+CCNN이 story cloze test에서 보여준 성능은 뛰어나진 않았지만 acceptable 했다(ending을 맞출 확률 59.4%). 단순히 bag-of-vectors approach를 이용한 word embedding에서도 비슷한 점수를 얻을 수 있었다. 이 bag-of-vectors 방식이 다른 방식들에 비해 비교적 더 좋은 성능을 보이곤 있지만 논문에서는 이게 BOV의 고점일 것이라고 생각한다. 
+
+### Conclusion
+
+여러 다양한 word embedding들을 비교했는데, distributional semantics만 표현하는 것(word2vec, GloVe, LexVec), relational knwoledge만 표현하는 것(ConceptNet PPMI), 이 둘을 결합 한 것(CCNN)에 대해 비교했고 둘 다 사용하는 게 더 좋다는 걸 보여주었다.
+
+ConceptNet은 word embedding이 더 robust해지고 인간이 내리는 판단들과 더욱 연관되게 한다.
+
+word embedding을 만들 때는 relational knowledge를 함께 사용하거나 relational knowledge에 대해 pre-traine된 word embedding을 사용하는 걸 고려해야 한다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

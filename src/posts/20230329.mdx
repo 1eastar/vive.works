@@ -1,0 +1,261 @@
+---
+id: "20230329"
+slug: "/20230329"
+title: "R^3: Reinforced Ranker-Reader for Open-Domain Question Answering"
+description: ""
+author: "Vive Kang"
+date: "2023-03-29"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+[https://arxiv.org/pdf/1709.00023.pdf](https://arxiv.org/pdf/1709.00023.pdf)
+
+### Background
+
+![0](../blogImage/16-0.png)
+
+**Precision**
+
+- True Positive / (True Positive + False Positive)
+- 정답이라 예측한 것들 중에서 실제 정답인 비율
+
+**Recall**
+
+- True Positive / (True Positive + False Negative)
+- 실제 정답들 중에서 올바르게 정답이라 예측한 비율
+
+**F1 score**
+
+![1](../blogImage/16-1.png)
+
+3가지 모두 0~1 사이의 값을 갖는다.
+
+## Motivation & Introduction
+
+좋은 open-domain QA system은 정답을 추론하기 위해 knowledge base에서 관련된 내용을 찾아내고 이해할 수 있어야 한다. 최근 딥러닝 기반의 연구는 Wikipedia 같은 large text corpora를 기반으로 한 open-domain QA에 집중하고 있다. 논문에서 search-and-reading QA(SR-QA)라고 부르는 이 방식은 적절한 passage를 고르기 위해 information retrieval(IR)을, 정답 phrase를 찾아내기 위해 reading comprehension(RC)를 사용한다. 이 방식은 open-domain QA에서 아직 그렇게 좋은 성능을 보여주지 못한다.
+
+SR-QA와 standard RC 간의 차이는 학습 때 사용하는 passage에 있는데, SR-QA는 모델에게 Q-A pair만 주고 IR component가 corpus에서 질문과 관련된 passage를 찾게 한다. 반면, standard RC는 수동으로 만들어진 passage를 이용한다. SR-QA의 IR component가 찾아낸 passage가 정답을 포함하지 않거나 정답과 관련이 없을 수도 있는데, 그러면 이후 RC training에 악영향을 끼친다.
+
+![2](../blogImage/16-2.png)
+
+table 1은 악영향을 끼치는 한 예시이다. "largest"와 "second largest"를 제대로 구분하지 못해 가장 높은 순위로 P1이 뽑혔고 P1을 통해서 RC를 학습시키게 되면 성능이 오히려 저하된다.
+
+논문에서는 Ranker와 Reader, 2개의 컴포넌트로 구성된 프레임워크를 제안한다. 
+
+- Ranker - 정답과 가장 관련있다고 생각하는 passage를 선택하고 Reader에게 전달한다.
+- Reader - 정답을 포함하는 span을 선택할 likelihood를 최대화 하도록 학습된다. SGD/back-propagation
+
+top-ranked passage에서 Reader가 얼마나 정확한 정답을 잘 뽑는지를 reward로 주면서 Ranker를 reinforce learning 한다.
+
+## Framework
+
+**Problem Definition**
+
+question $q$와 $a^g$라는 정답을 포함하는 passage들(IR에서 뽑은 top N개의 passage)을 갖고 있다고 가정한다. 훈련 동안에는 $(q,a^g)$ 쌍을 이용한다.
+
+**Framework Overview**
+
+![3](../blogImage/16-3.png)
+
+## R^3: Reinforce Ranker-Reader
+
+**Passage Representation Using Match-LSTM**
+
+Match-LSTM은 어텐션 메커니즘을 사용해 passage과 question 간의 word similarity를 구한다.  먼저, Bi-LSTM을 통해 passage $P$와 question $Q$의 각 단어들이 각각 $l$차원으로 인코딩 된다.
+
+$$
+H^p=BiLSTM(P), \space H^q=BiLSTM(Q)
+$$
+
+- $H^p \in \mathbb{R}^{l \times (\# \space of \space tokens \space in \space P)}$, $H^q \in \mathbb{R}^{l \times (\# \space of \space tokens \space in \space Q)}$ 은 passage와 question의 hidden state
+
+이후 passage 안의 각 단어들에 대한 question 전체 단어의 어텐션 weight를 구한다.
+
+![4](../blogImage/16-4.png)
+
+- $W^g \in \mathbb{R}^{l\times l}, b^g \in \mathbb{R}^{l}$는 학습시킬 parameter
+- $b^g\otimes{e_Q}$는 $\mathbb{R}^l$인 $b^g$를 $l\times l$ matrix로 만들기 위해 복사하는 과정
+- $G \in \mathbb{R}^{Q\times P}$의 $i$번째 column은 $i$번째 passage 단어에 대한 question 전체 단어의 어텐션 weight
+
+passage의 각 단어에 대해 question representation을 만든다
+
+![5](../blogImage/16-5.png)
+
+- passage의 각 단어에 대해 구한 전체 question의 어텐션 weight를 question과 연산. (transformer에서 QK로 구한 어텐션 값을 V랑 곱해주는 과정과 비슷하다)
+
+word matching representation $M \in \mathbb{R}^{2l \times P}$를 만든다.
+
+![6](../blogImage/16-6.png)
+
+- $W^m \in \mathbb{R}^{2l\times 4l}$는 학습시킬 parameter
+- []는 column concat
+
+Bi-LSTM을 통해 $M$을 passage와 question 간의 sequence matching representation로 만든다.
+
+$$
+H^m=BiLSTM(M)
+$$
+
+- $H^m \in \mathbb{R}^{l\times P}$
+
+이 $H^m$을 Ranker와 Reader의 input으로 사용하는데, 연산량을 줄이기 위해 $M$까지는 공유하고 마지막 $H^m$을 구할 때만 다른 parameter를 이용한다.
+
+이 과정을 그림으로 요약하면 다음과 같다.
+
+![7](../blogImage/16-7.png)
+
+**Ranker**
+
+$N$개의 passage에 대해 $H_i^{Rank}, i \in [1, N]$을 구한 후에는 다음의 연산을 거친다.
+
+![8](../blogImage/16-8.png)
+
+- $u_i$는 $i$번째 passage가 question과 얼마나 관련있는지를 fixed-size representation으로 나타내기 위해 max-pooling한 값($H_i^{Rank} \in \mathbb{R}^{l\times P}, u_i \in \mathbb{R}^{l}$)
+- $C$는 $N$개의 passage를 concat한 후 non-linear transformation해서 구한 값($C\in \mathbb{R}^{l\times N}$)
+- $\gamma$는 각 passage가 정답 관련 내용을 포함할 확률($\gamma \in \mathbb{R}^N$)
+
+이때 action policy는 다음과 같다.
+
+$$
+\pi(\tau|q;\theta^{\tau})=\gamma_{\tau}
+$$
+
+- $\gamma_{\tau}$는 passage $\tau$가 선택될 확률(정답 관련 내용을 포함할 확률)
+- policy $\pi(\tau|q)$에 따라 Reader의 input으로 넘겨줄 passage를 샘플링하는 action이다.
+
+**Reader**
+
+Reader는 Ranker에서 선택된 passage $\tau$에서 answer span을 찾아낸다.
+
+먼저, Match-LSTM의 output $H^{Read}$를 통해, 모든 passage의 answer span start position $\beta^s$의 확률을 구한다.
+
+![9](../blogImage/16-9.png)
+
+- $neg_n$은 정답을 포함하지 않는 passage들
+- $V$는 passage 안의 총 단어 수, $e_V$는 $V$차원 벡터
+- []는 column concat
+- $W^s\in \mathbb{R}^{l\times l}, \space b^s,w^s\in \mathbb{R}^l$는 학습 파라미터
+- $\beta^s\in\mathbb{R}^V$는 passage 안의 각 단어가 start point일 확률
+
+같은 방식으로 별도의 parameter $W^e, b^e, w^e$ 를 사용해서 passage 내 각 단어가 ending position일 확률 $\beta^e\in\mathbb{R}^V$을 구한다.
+
+이때 loss function은 다음과 같이 표현할 수 있다.
+
+![10](../blogImage/16-10.png)
+
+- $a^g$는 ground-truth answer
+- $\tau$는 앞서 Ranker의 action에서 샘플링한 passage. 그리고 훈련 동안, passage $\tau$가 answer $a^g$를 포함할 때까지 샘플링을 계속한다.
+- $\beta_{a_\tau^s}^s,\beta_{a_\tau^e}^e$는 passage $\tau$에서 $a^s$와 $a^e$가 각각 start/end position일 확률
+
+**Training**
+
+Ranker는 REINFORCE algorithm을 통해, Reader는 SGD/backpropagation을 통해 학습된다.
+
+![11](../blogImage/16-11.png)
+
+학습할 때, 먼저 policy $\pi(\tau|q)$에 따라 passage $\tau$를 샘플링하고, Reader parameter들을 $\tau$에 대해 backpropagation으로 학습한다. 그리고 나서 Reader의 loss인 $L(a|\tau,q)$를 reward로 이용하는 policy gradient를 이용해 Ranker를 학습한다. 그러나 사실 $L(a|\tau,q)$는 bounded 되어있지 않아서 reward로 사용하기 부적절하다(예를 들어, 0~1 사이 정도의 값으로 reward를 bounding 해주지 않으면 특정 케이스의 비중이 너무 커지거나 작아질 수 있다). 따라서 새로운 bounded 함수 $R(a^g,a^{rc}|\tau)$를 정의한다.
+
+![12](../blogImage/16-12.png)
+
+여기서 $a^g$는 ground-truth answer, $a^{rc}$는 Reader가 예측한 값, 함수 $f1$은 두 변수의 F1 score를 뜻한다. 따라서 정확한 예측을 했을 경우 2 reward를, 몇 가지 겹치는 단어를 예측했지만 정확히는 못했을 경우 F1 score 만큼의 reward를, 아예 overlap이 없을 경우 -1 reward를 주도록 했다. 
+
+**Prediction**
+
+테스트할 때는 Ranker와 Reader를 합쳐서 정답을 예측했다. 
+
+![13](../blogImage/16-13.png)
+
+$Pr(a,\tau)$는 passage $\tau$에서 정답 $a$를 찾아낼 확률이고 가장 높은 확률의 정답을 최종 예측 값으로 사용한다.
+
+## Experimental Settings
+
+**Datasets**
+
+아래 표에 나오는 5개의 dataset을 통해 모델을 평가한다.
+
+![14](../blogImage/16-14.png)
+
+- Quasar-T - 다양한 internet source에서부터 가져온 Q-A pair. SR-QA를 위한 dataset
+- SQuAD_OPEN - SQuAD에서 passage를 제거해 open-domian QA 세팅으로 만든 dataset
+
+아래 4개 dataset에는 candidate passage가 없어서 Wikipedia 기반으로 추가해주었다. question으로 top-200개의 글을 찾고, BM25로 rank를 매긴 뒤 sentence 단위로 나눈다. sentence를 TF-IDF를 기준으로 top-200개를 선택해서 질문 별로 200개의 sentence를 찾게 했다.
+
+- BM25
+    
+    [https://littlefoxdiary.tistory.com/12](https://littlefoxdiary.tistory.com/12)
+    
+
+**Baselines**
+
+public baselines
+
+- GA
+- BiDAF
+- DrQA
+
+internal baselines
+
+- Single Reader (SR)
+Ranker가 없는 대신 N개의 passage 중에서 랜덤 샘플링 한다.
+- Simple Ranker-Reader ($SR^2$)
+Ranker를 RL시키는 게 아니라 Ranker와 Reader 둘 다 각각의 objective를 갖고 동시에 학습시킨 모델이다. ground-truth answer를 포함하는 모든 passage를 positive case로 여긴다.
+
+**Implementation Details**
+
+학습할 때는 retrieved passage에 질문 관련 내용이 포함될 확률을 높이기 위해 question에 answer를 결합하여 사용했지만, 테스트할 때는 question만 이용해 top 50개의 passage를 찾아냈다.
+
+학습 과정에서는, 앞서 설명한대로 Match-LSTM의 $M$까지는 Ranker와 Reader가 공유하고, 각각 3-layer, 1-layer의 BiLSTM을 거쳐 $H^{Rank},H^{Read}$를 만들어 낸다.
+
+- Adamax optimizer
+- GloVe word embedding, 300-dimension
+- batch-size 30
+- lr 0.002
+
+## Results and Analysis
+
+### Overall Results
+
+![15](../blogImage/16-15.png)
+
+SR만으로도 몇몇 sota를 넘기도 했고 R3가 대부분 가장 성능이 좋았다. RL을 사용하지 않는 SR2랑 비교했을 때 성능이 더 잘 나오는 걸로 봐서 RL을 이용해 학습하는 방식이 더 효과적이었다는 걸 보여준다.
+
+### Further Analysis
+
+**Quantitative Analysis**
+
+Ranker가 ground-truth ranking score가 없다는 점을 RL을 통해서 극복할 수 있는지를 알아보려 한다. 2개의 동일한 SR에 각각 SR2, R3에서 학습시킨 Ranker를 합쳐서 새 모델을 만들어 테스트했다. 
+
+![16](../blogImage/16-16.png)
+
+R3의 Ranker를 사용했을 때 성능이 가장 좋았는데, 이는 Ranker를 DS data로 학습시켜주는 것 보다 RL 방식을 이용하는 게 더 낫다는 걸 뜻한다. 뿐만 아니라 SR + Ranker(from R3) 40.0에서 R3 40.8로 성능이 좋아진 걸 볼 때, Reader의 성능까지도 향상시킨다는 걸 알 수 있다.
+
+**Potential Improvement**
+
+We offer a statistical analysis to approximate the upper bound achievable by only improving the ranking models.
+
+![17](../blogImage/16-17.png)
+
+각 질문에 대해 retrieved top-50 passage에서 각각 하나씩 answer를 찾고 $Pr(a,\tau)$에 따라 top-k answer를 찾는다. top-k answer 중에서 F1/EM score가 가장 높은 답을 취했다.
+
+TOP-3/5 에서 TOP-1보다 거의 10-20% 이상 성능의 차이가 났다.
+
+**Ranker Performance Analysis**
+
+R3의 Ranker에서는 ground-truth answer를 이용하지 않기 때문에, 비교/평가를 위해 pseudo 라벨을 추가했다. retrieved passage가 ground-truth answer를 포함하고 있으면 positive로 보고, Ranker의 top-k passage 중에 answer를 포함하고 있으면 예측이 맞은 걸로 생각한다(= recall of top-k passage). k=1인 경우 앞서 설명한 SR2의 Ranker와 같다.
+
+![18](../blogImage/16-18.png)
+
+SR2는 이 pseudo 라벨을 통해 학습 했음에도 불구하고, TOP-1,3 일 때는 R3의 Ranker가 SR2의 Ranker보다 성능이 훨씬 좋다. 
+
+TOP-5에서는 R3의 recall이 약간 더 낮은데, 이는 TOP-5개의 passage에 대해서 R3와 SR2가 비슷한 성능을 내기 때문이라고 한다.
+
+종합하면, R3의 Ranker가 더 높은 우선순위로(TOP 1-3) 정답을 찾는 데 유용한 passage를 더 잘 찾아낸다는 걸 알 수 있다. 
+
+## Conclusion
+
+IR과 Ranker, Reader를 합친 R3를 소개했다. 먼저 IR 모델에서 질문과 관련된 top-N개의 passage를 찾고, Ranker와 Reader를 RL을 이용해 동시에 학습시킨다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

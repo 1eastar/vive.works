@@ -1,0 +1,189 @@
+---
+id: "20230411"
+slug: "/20230411"
+title: "COMMONSENSEQA: A Question Answering Challenge Targeting Commonsense Knowledge"
+description: ""
+author: "Vive Kang"
+date: "2023-04-11"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+사람이 질문에 대한 답을 할 때는 공간적인 요소, 원인과 그 영향, 과학적 fact, 사회적 규율 등에 대한 commonsense와 배경 지식을 고려할 수 있다. 예를 들어, "Where was Simon when he heard the lawn mower"라는 질문에서 Simon은 실외에 있고 lawn mower와 가까이 있다는 걸 추론할 수 있다. 이런 정보는 굉장히 중요하지만 아직 NLU 영역에서는 사람에 한참 미치지 못하고 있다. 
+
+QA 연구는 대부분 commonsense가 거의 필요없이 주어진 context에서 정답을 찾는 것에 집중하고 있다. 그리고 여러 작은 benchmark들이 commonsense를 target으로 하고 있지만 스케일을 키우기 힘들어 보인다.
+
+최근 large-scale commonsense reasoning dataset인 SWAG는 특정 event에 대한 설명으로 가능성 있는 이어질 event를 추론하도록 한다. 그러나 많은 양의 unlabeled data로 학습된 모델이 SWAG에서는 쉽게 사람 수준의 성능을 보여주었다.
+
+논문에서는 ConceptNet의 knowledge에 기반한 새로운 commonsense QA dataset을 제안한다. commonsense question을 만들 때 crowdworker에게 ConceptNet에서의 concept간의 relation에 대한 질문을 만들도록 했다.
+
+![0](../blogImage/24-0.png)
+
+crowdworker는 ConceptNet relation으로 연관되어있는 source concept "river"와 3개의 target concepts "Waterfall", "Bridge", "Valley"를 본다. 그 후 target concept 당 하나의 질문을 만드는데 다지 선다 중에 그 특정 target concept만 정답이 되도록 질문을 만든다. 그리고 ConceptNet에서 하나의 distractor를 뽑고 하나는 직접 만들어서 총 5지 선다형의 질문이 되도록 했다.
+
+총 12247개의 질문을 모았고 이 CommonsenseQA를 다양한 pre-trained model, fine-tuned model, RC model 들에 학습시켜서 평가해보았다. 결과적으로 fine-tuning한 BERT-large 모델이 55.9%로 성능이 가장 좋았지만 human performance 88.9%에는 한참 미치지 못했다.
+
+**Contributions**
+
+1. commonsense에 대한 새로운 QA dataset
+2. ConceptNet으로부터 많은 양의 commonsense question을 만들어내는 새로운 방법
+3. CommonsenseQA를 사용해 학습 했을 때의 성능 평가. 사람에게 한참 미치지 못함을 보여줌.
+
+## **Dataset Generation**
+
+사람이 주어진 context가 아닌 상식으로만 쉽게 답할 수 있는 질문을 만드는 방법을 개발하는 게 목표이다. 다음의 step으로 multiple-choice question을 만들었다.
+
+![1](../blogImage/24-1.png)
+
+1. ConceptNet에서 하나의 source concept과 3개의 target concept으로 구성된 subgraph를 뽑았다.
+2. worker들에게 subgraph마다 3개의 질문(각 target concept마다 하나씩)을 만들게 했고 각 질문에는 2개의 distractor를 추가했다.
+3. search engine을 통해 관련된 snippet을 찾아보고 각 질문에 textual context를 추가했다.
+
+이제 각 step 별로 더 자세히 설명하려 한다.
+
+**Extraction from ConceptNet**
+
+ConceptNet은 (c1, r, c2)의 triplet으로 commonsense knowledge를 갖고 있고 총 32M개의 triplet가 있다. worker에게 줄 triplet subset을 고르기 위해 다음의 step을 거쳤다.
+
+1. general relation(e.g. RelatedTo), 이미 잘 연구된 relation(e.g. IsA)들은 제외했다. 총 22개의 relation만 사용했다.
+2. concept이 영어가 아니거나 4단어 이상이면 제외했다.
+3. c1과 c2의 edit distance가 너무 가까우면 그 triplet은 제외했다.
+
+이렇게 총 236,208개의 triplet(q, r, a)을 모았고, 첫번째 concept을 question concept, 두번째 concept을 answer concept이라고 부른다. 여기서 question concept을 포함하고 정답이 answer concept인 질문을 만드려고 했다. 이후 distractor를 추가해주는데, ConceptNet 안의 임의의 샘플을 사용하면 너무 쉬울 수 있기 때문에 3개의 triplet을 묶은 subgraph 안에서 서로의 정답이 distractor가 되도록 했다.
+
+**Crowdsourcing questions**
+
+worker들에게 질문을 만들고 검증하게 했다. 질문을 만들 때 answer concept과 많이 관련있는 단어를 질문에 사용하지 않도록 했다. 예를 들어, "door"가 정답이면 "open"이라는 단어를 쓰지 않도록 했다. 그리고 75% 이상의 annotator가 accept한 질문만 사용했다.
+
+**Adding additional distractors**
+
+문제를 더 어렵게 만들기 위해 각 질문에 2개의 틀린 보기를 추가해주었다. 하나는 ConceptNet의 같은 relation을 가진 answer concept 중에 하나를 선택했고 하나는 worker가 직접 만들게 했다. worker에게는 그럴듯하지만 사람은 구분하기 쉬운 오답을 만들어 달라고 했다.
+
+**Verifying questions quality**
+
+verify할 때, worker들에게 정답을 고르거나 unanswerable을 선택하게 했다. 각 질문당 2명의 worker가 검증했고 한명 이상이 정답을 맞춘 질문만 사용했다. 총 15%의 질문이 제외되었다.
+
+**Adding textual context**
+
+web text가 commonsense question에 답을 할 때 도움이 되는 지 확인하기 위해 각 질문에 다음과 같은 방식으로 textual information을 추가했다.
+
+1. 모든 질문과 그 정답을 concat한 후 그 내용을 google 검색을 한다.  (‘What does a parent tell their child to do after they’ve played with a lot of toys? + "clean room"’)
+2. 질문의 5개 정답 후보들 전부 검색을 하고 먼저 등장하는 100개의 result snippet을 모아서 총 500개의 snippet을 모은다.
+3. 이렇게 모은 context를 이용해 reading comprehension 모델에 CommonsenseQA를 적용했을 때 그 성능을 평가한다.
+    
+    ![2](../blogImage/24-2.png)
+    
+    CommonsenseQA 통계
+    
+
+## Dataset Analysis
+
+**ConceptNet concepts and relations**
+
+CommonsenseQA는 ConceptNet 기반으로 만들어졌고 ConceptNet에는 "dog", "house", "row boat" 같은 concept들이 "Causes", "CapableOf", "Antonym" 같은 relations으로 연결되어 있다.
+
+top-5 concept은 Person(3.1%), People(2.0%), Human(0.7%), Water(0.5%), Cat(0.5%)이고 main relation들의 비율은 아래 표와 같다.
+
+![3](../blogImage/24-3.png)
+
+**Question formulation**
+
+question에 사용된 첫번째와 두번째 단어의 distribution을 분석했다. 
+
+![4](../blogImage/24-4.png)
+
+WH-word로 시작한 질문이 44%밖에 안 되었다는 점이 흥미로웠고, 5%가 사람의 first name, 7%가 if 였다. 이는 question language의 높은 variability를 보여준다.
+
+**Commonsense Skills**
+
+CommonsenseQA에서 질문에 대한 답을 하기 위해 필요한 commonsense knowledge type을 분석했다. 랜덤 샘플링으로 100개를 뽑아서 다음의 과정으로 분석을 수행했다.
+
+1. 각 질문에 대해, 답을 하기 위해 사람이 사용하는 commonsense skill의 타입을 명시적으로 표시했다.
+2. 질문 별로 여러개의 commonsense skill을 선택할 수 있었고 평균적으로 1.75개의 skill을 가졌다.
+
+![5](../blogImage/24-5.png)
+
+![6](../blogImage/24-6.png)
+
+위 Figure 3에서 labeled edge가 두 node 간의 commonsense skill을 뜻한다. Table 3는 skill category 정의와 빈도수를 나타냈다.
+
+## Baseline Models
+
+사람에게는 쉽지만 NLU 모델에게는 어려운 commonsense question dataset를 모으는 게 목표이기 때문에, 다양한 baseline을 두고 비교/평가했다. 아래 표는 각 모델이 (a) CommonsenseQA를 이용해 학습했는지, (b) context(web snippet)을 사용했는지 여부를 나타낸다.
+
+![7](../blogImage/24-7.png)
+
+1. VecSim
+각 question, answer가 pre-trained word embedding 평균 값으로 표현되고 질문에 대한 cosine similarity가 가장 높은 answer를 선택한다.
+2. LM1B
+One Billion Words Benchmark로 pre-train된 모델이다. 다음 2가지 variation을 사용한다.
+    1. **LM1B-Concat**
+    각 answer, question을 concat
+    2. **LM1B-Rep**
+    처음 두개의 단어로 클러스터링을 한 후 5개의 high-frequency prefix(e.g. "what is")를 찾았다. 이 5개 중 하나의 prefix를 사용하는 질문을 정답을 포함하는 declarative sentence로 수정했다. 예를 들어, "What is usually next to a door"라는 질문의 답이 "wall"일 때, "Wall is usually next to a door". 그 외의 prefix의 경우 (a)처럼 concat한다.
+    
+    이 두가지 모두 가장 높은 확률의 answer를 반환한다.
+    
+3. QABilinear
+질문 $q$의 정답 $a_i$에 대해 $qWa_i^{\top}$을 이용해 score를 계산한다.
+4. QACompare
+질문 $q$와 candidate answer $a_i$ 사이의 interaction $h$를 계산하고 $hW_2+b_2$(feed forward layer)를 통해 answer score를 예측한다.
+5. ESIM
+6. BiDAF++
+sota RC model이고 google web snippet을 검색한 후 context로 사용한다.
+7. GPT(Generative Pre-trained Transformer)
+CommonsenseQA의 question과 answer를 "[start] < question > [sep] < answer > [end]" 형식으로 인코딩 후 GPT에 fine-tuninig 했다. [end] 토큰의 hidden representation에 linear transformation과 softmax를 적용함으로써 정답의 final probabilities를 찾는다.
+8. BERT
+GPT처럼 BERT에 CommonsenseQA를 적용하기 위해, "[CLS] < question > [SEP] < answer > [SEP]"로 인코딩하고 이걸로 uncased BERT-large 모델의 pre-trained weight를 fine-tuning 했다. GPT와 유사하게 [CLS] 토큰을 이용해 예측했다.
+
+## Experiments
+
+**Experimental Setup**
+
+data를 training/development/test set으로 80/10/10으로 나누는데 두가지 방식으로 나누었다. (1) 완전히 랜덤으로 나누기, (2) question concept이 겹치지 않게 나누기. 결과적으로 CommonsenseQA를 랜덤하게 나누는 방식으로 모델을 학습시키기가 더 어려웠다. 왜냐하면 training, development, test set 전부에서 서로 다른 정답을 갖는 동일한 question concept이 등장하기 때문이다. 따라서 random split을 CommonsenseQA의 main split으로 삼았다.
+
+모든 모델들에 대해 accuracy(예측이 맞은 example의 비율)를 측정했고 development set으로 hyperparameter를 tuning 했다.
+
+task(5지 선다 QA)가 얼마나 어려운 지 알아보기 위해, SANITY mode를 추가했다. 이는 각 질문에 candidate로 추가되었던 2개의 distractor를 ConceptNet 내의 랜덤한 distractor로 바꿔준 mode이다. 이 SANITY mode에서의 테스트 결과가 더 좋을 거라고 기대한다.
+
+**Human Evaluation**
+
+100개의 랜덤 샘플링한 question에서 각 질문에 대해 5명의 worker로부터 정답을 모았다. human accuracysms 88.9%가 나왔다.
+
+**Results**
+
+![8](../blogImage/24-8.png)
+
+가장 성능이 좋은 baseline인 BERT-large도 55.9%의 accuracy를 보였고 이는 human evaluation에 한참 미치지 못해 이 benchmark는 사람에게 훨씬 쉽다는 걸 보여준다. 그래도 55.9%정도면 찍어서 맞출 확률인 20% 보다는 한참 높고, 이를 통해 LM이 많은 양의 commonsense knowledge를 저장하고 있다는 걸 보여준다.
+
+BiDAF++의 성능으로 볼 때 snippet을 이용하는 건 그렇게 성능에 좋은 영향을 미치지 못하고 snippet이 유용한 정보들을 담고 있지 않다는 걸 뜻한다.
+
+평균적으로 random split이 question concept split보다 5%가량 성능이 낮았다. 이는 traninng/development/test set에서 서로 다른 답을 갖는 동일한 question concept을 공유하는 게, network가 question concept과 answer의 relation을 기억하기 어렵게 했기 때문이라고 한다.
+
+SANITY mode의 성능이 훨씬 좋은 걸로 봐서는 잘 선택된 distractor의 역할이 중요하다는 걸 알 수 있다.
+
+**Baseline analysis**
+
+BERT-large의 성능에 대해 좀 더 자세히 알아보기 위해, dev set의 examples 100개를 분석했다. 각 example마다 1개 이상의 category를 라벨링했고 category 별로 평균 accuracy를 계산했다.
+
+![9](../blogImage/24-9.png)
+
+surface clues로 분류된 example(정답에 대한 힌트로 surface clues를 주는 examples)들에 대한 성능이 77.7%로 가장 좋았다.
+
+**Learning Curves**
+
+![10](../blogImage/24-10.png)
+
+더 많은 데이터로 학습할 때 모델의 성능이 더 좋은 지 보기 위해 BERT-large를 다양한 양의 데이터로 학습시켜 테스트해봤다. 100K의 examples를 BERT-large에 학습시켰을 때 대략 75%의 accuracy를 보였고 이는 아직 human evaluation에 미치지 못하는 수치이다.
+
+## Conclusion
+
+commonsense knowledge를 test하는 데 초점을 둔 dataset인 CommonsenseQA를 소개한다. ConceptNet을 통해 많은 양의 어려운 question을 생성하는 방법을 보여주었고, 그렇게 생성한 dataset을 분석하고 다양한 baseline에 적용시켜 평가해보았다.
+
+CommonsenseQA를 이용했을 때 가장 좋은 결과를 낸 모델은 55.9%로 pre-trained LM이고 아직 human eval(88.9%)에 한참 미치지 못한다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

@@ -1,0 +1,103 @@
+---
+id: "20230322"
+slug: "/20230322"
+title: "BI-DIRECTIONAL ATTENTION FLOW FOR MACHINE COMPREHENSION"
+description: ""
+author: "Vive Kang"
+date: "2023-03-22"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+기존 어텐션 메커니즘은 다음 3가지 중 1가지 이상의 특징을 가진다.
+
+1. 계산된 어텐션 weight는 context(fixed-size vector로 표현된)로부터 관련된 정보를 가져와서 질문에 대한 답을 내기위해 사용된다.
+2. 텍스트 도메인에서 어텐션은 시간에 따라 동적으로 변하며, 현재의 어텐션 weight가 다음 스텝의 어텐션 weight에 영향을 끼친다.
+3. context나 image에 쿼리가 영향을 받는 uni-directional한 특성을 가진다.
+
+논문에서는 BiDAF를 소개한다. 총 6개의 계층(layer)을 가지고 bi-directional한 어텐션을 이용해서 query-aware context representation을 얻는다. 이 논문에서 소개하는 어텐션 메커니즘에는 다음의 개선점이 있다.
+
+1. 어텐션 layer에서 context를 fixed-size vector로 표현하지 않는다. 대신, 어텐션을 매 time step 마다 계산하여 이전 layer의 representation($H$)과 함께 다음 layer로 넘겨준다.
+    
+    → 정보를 fixed-size vector로 초기에 압축했을 때 생기는 정보 손실을 줄일 수 있다.
+    
+2. memory-less 어텐션 메커니즘을 이용한다. 한 시점에서 어텐션 계산을 할 때, 현재의 context와 query를 이용해서 계산을 하고 이전 시점의 어텐션에 영향받지 않는다.
+    
+    → 어텐션 layer는 context와 query 간의 어텐션을 학습하는 데 집중하고, modeling layer에서는 query-aware context representation 내의 상호작용을 학습하는 데 집중할 수 있다.
+    
+    → 이전 어텐션이 틀렸더라도 이후의 연산에는 영향을 안 받을 수 있다.
+    
+3. query-to-context, context-to-query 두 방향 어텐션을 계산한다.
+    
+    → 상호 보완해줄 수 있다.
+    
+
+## Model
+
+![1](../blogImage/12-1.png)
+
+1. **Character Embedding Layer**
+이 layer에서는 input context, query에 있는 각 단어들을 CNN을 이용해 character-level embedding 한다. 단어의 character들을 embedding한 후 각 character embedding을 CNN의 1D input 값으로 여긴다. CNN의 output을 max-pool 방식을 통해 그 단어의 fixed-size vector를 표현한다.
+2. **Word Embedding Layer**
+pre-trained word vector **Glove**를 이용해 각 단어의 fixed-size vector를 얻는다.
+
+1, 2번 과정으로 얻은 character embedding, word embedding을 concat한 후 2-layer Highway Network에 입력한다. Highway Network의 output은 2개의 d차원 벡터로 구성되어 있고, $X_{d\times T}$는 context, $Q_{d\times J}$는 query 로 구성되어 있다.
+        
+3. **Contextual Embedding Layer**
+각 단어들 간에 순차적인 interaction을 모델링하기 위해 bi-directional LSTM을 이용한다. LSTM을 통해, context word vector $X_{d\times T}$에서 $H_{2d\times T}$를, query word vector $Q_{d\times J}$에서 $U_{2d\times J}$를 구한다. 여기서는 matrix $Q, U$는 column을 하나의 단어에 해당하는 벡터로 표현한다.
+
+앞선 1~3 단계는 query와 context로부터 feature를 계산하는 과정이었는데, 전체적으로 봤을 때 CNN의 multi-stage feature computation과 비슷하다.
+4. **Attention Flow Layer**
+input: $H, U$
+output: context word의 query-aware vector representation $G$, 이전 layer의 $H, U$
+
+****context를 fixed-size vector로 표현하지 않고, 매 time step의 어텐션 벡터를 이전 layer의 representation과 함께 다음 layer로 넘겨준다.
+어텐션을 계산할 때는 C2Q, Q2C 양방향 둘 다 계산한다. 어텐션을 계산할 때, similarity matrix를 사용하는데, t번째 context 단어와 j번째 query 단어에 대해 $S_{tj}=\alpha(H_{:t},U_{:j})$로 표현된다.
+ 
+**Context-to-Query Attention(C2Q)**
+각 context word에 대해 어떤 query word가 관련있는지를 나타낸다. t번째 context word대한 query word들의 어텐션 확률은 $a_t=softmax(S_{t:})$로 표현되고 그 어텐션 벡터는 $\tilde{U}_{:t}=\sum_ja_{tj}U_{:j}$로 표현된다. $\tilde{U}_{2d\times T}$는 전체 context에 대한 query vector 어텐션이다.
+
+**Query-to-Context Attention(Q2C)**
+각 query word에 대해 어떤 context word가 가장 연관되어 있는지, 즉 답변하는 데 중요한 역할을 하는지를 나타낸다. 각 query word에서 context word에 대한 어텐션 weight는 $b=softmax(max_{col}(S))$로 표현되고, context vector 어텐션은 $\tilde{h}=\sum_tb_tH_{:t}$로 표현된다. 이 값은 query에 대해 중요한 context word들의 weighted sum이다. $\tilde{h}$가 context word 개수만큼 $T$번 반복되면서 $\tilde{H}_{2d}$를 만든다.
+
+마지막으로, contextual embedding과 context/query attention vector를 이용해 $G$ matrix를 만든다.
+    
+$$
+G_{:t}=\beta(H_{:t}, \tilde{U}_{:t}, \tilde{H}_{:t})
+$$
+
+$G_{:t}$는 t번째 column vector(t번째 context word), $\beta$는 학습가능한 vector function.
+    
+5. **Modeling Layer**
+context word의 query-aware representation인 $G$를 input으로 받는다. 3번의 contextual embedding layer에서는 query에 상관없이 context 단어간의 관계에 주목했다면, 이 layer에서는 query에 따른 context 단어의 관계에 주목한다.
+2-layer의 bi-directional LSTM을 이용하고 $M_{2d}$ matrix를 출력한다. $M$의 각 column은 전체 context와 query 단어들에 대한 문맥 정보를 포함하고 있을 것이라 예상한다.
+****
+6. **Output Layer**
+이 layer는 어떤 task에 적용할 것이냐에 따라서 수정해서 사용할 수 있다. 6-layer로 나누어지는 BiDAF의 모듈스러운 특성상, 마지막 output layer를 task에 맞게 바꾸고 나머지 layer들은 그대로 두는 식으로 사용할 수 있다. 
+QA task는 질문에 대한 답으로 paragraph 속에서 적절한 phrase를 찾는 문제이다. phrase를 예측할 때 phrase의 시작과 끝 단어를 예측하도록 하는데, 전체 paragraph에서 시작 단어의 index에 대한 확률 분포는 $p^1=softmax(w_{(p^1)}^{\top}[G;M])$로 표현한다($w_{(p^1)}$은 학습가능한 weight vector). 끝 단어 index를 얻기 위해 $M$을 새로운 bidirectional LSTM을 거쳐 $M^2$를 얻고, 이를 이용해 끝 단어 index에 대한 확률 분포  $p^2=softmax(w_{(p^2)}^{\top}[G;M^2])$를 구한다.
+
+**Training**
+예측한 값과 실제 시작, 끝 단어의 negative log probability의 합을 최소화하도록 학습시킨다.
+
+## Question Answering Experiments
+
+### Dataset
+
+SQuAD를 사용하고, Exact Match(EM), F1 score를 지표로 사용한다. 
+
+![2](../blogImage/12-2.png)
+
+single 모델로는 sota에 근접한 성능을 보였고, 앙상블을 이용했을 때 sota를 넘어서는 성능을 보여주었다.
+
+### Ablation
+
+(b) 테이블을 보면 char-level, word-level embedding이 둘 다 성능에 영향을 끼치는 것을 알 수 있다. bi-directional 어텐션이 아닌 C2Q, Q2C 중 하나씩만 사용했을 때도 성능이 많이 떨어졌고, 특히 C2Q가 없을 때는 10 포인트나 떨어졌다. modeling layer 내에서 dynamic하게 어텐션을 계산하는 방식보다 이전 layer에서 계산한 어텐션을 modeling layer에서 사용하는 방식이 더 성능이 좋았다.
+
+모델에 가장 큰 영향을 끼치고 있는 요소는 **word-level embedding**과 **C2Q 어텐션**이다.
+
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

@@ -1,0 +1,123 @@
+---
+id: "20230310"
+slug: "/20230310"
+title: "GPT: Improving Language Understanding by Generative Pre-Training"
+description: ""
+author: "Vive Kang"
+date: "2023-03-10"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+
+## Motivation & Introduction
+raw text로부터 학습하는 능력은 NLP에서 supervised learning에 대한 의존성을 줄일 수 있어서 중요하다. 충분한 양의 labeled data로 supervised learning을 했더라도 unsupervised learning을 통해 더 학습할 수 있다면 성능을 훨씬 더 높일 수 있다. 그러나 unlabeled 텍스트를 단어 수준 이상의 데이터로 활용하기 힘든 2가지 이유가 있다. 첫째로, 다른 task들로 transfer learning 할 수 있는 representation을 학습하는데 어떤 objective function이 가장 효과적인지 불분명하고, 둘째로, 이렇게 학습된 representation을 다른 task로 transfer learning하는 가장 효과적인 방법에 대한 합의가 아직 이루어지지 않았다.
+
+이 논문에서는 unsupervised pre-training과 supervised fine-tuning을 합친 semi-supervised approach에 대해 다룬다. 그리고 이 접근을 이용해 약간의 fine-tuning 만으로 이용할 수 있는 범용 representation을 학습시킨다.
+
+## Related Works
+**Semi-supervised learning for NLP**
+
+초기의 연구들은 unlabeled data를 word-level, phrase-level의 통계를 분석하는데 이용하여 supervised model의 feature로 이용했다. 최근 몇 년 간 unlabeled corpora로부터 학습된 word embedding을 이용하는 것이 성능을 향상시킨다는 것을 발견했지만, 기존에는 단어 수준에 그쳤으며 논문에서는 더 높은 수준의 semantics에 대해 다루려 한다.
+
+**Unsupervised pre-training**
+
+unsupervised pre-training의 목적은 supervised learning objective를 수정하지 않고 적절한 시작점을 찾는 것이다. language model을 pre-training하고 target task에 맞게 fine-tuning하는 방식의 연구가 있었지만, LSTM의 한계(LSTM은 근본적으로 메모리 크기를 초과하는 양의 정보를 저장할 수 없다)로 인해 짧은 range의 linguistic structure만을 예측할 수 있었다. 논문에서는 transformer 기반의 network를 구성하여 긴 range의 linguistic structure도 예측할 수 있다고 한다.
+
+**Auxiliary training objectives**
+
+추가적인 unsupervised training objectives를 training process에 더하는 것도 semi-supervised learning의 일종으로 성능 향상에 기여할 수 있다. 
+
+unsupervised pre-training을 통해 target task과 관련된 여러 언어적인 부분은 사전에 학습되지만, GPT에서는 auxiliary objectives를 사용한다.
+
+## Framework
+학습 과정은 많은 양의 text를 먼저 학습하고, task specific한 labeled data로 fine-tuning하는 2단계로 진행된다.
+
+### Unsupervised pre-training
+unsupervised 코퍼스의 토큰들 $U = \{u_1, ..., u_n\}$이 있을 때, 다음의 우도(likelihood)를 최대화하는 목적 함수를 이용한다. 즉, $L_1$이 최대화되도록 pre-training을 진행한다.
+
+$$
+L_1(U)=\sum_{i}logP(u_i|u_{i-k}, ... ,u_{i-1};\theta)
+$$
+
+k는 고려할 문맥의 범위(context window) 값이다. P는 $\theta$라는 parameter를 가지는 NN에서 앞선 k개의 토큰($ u_{i-k},...,u_{i-1}$)이 주어졌을 때 그 다음에 나올 토큰 $u_i$ 에 대한 확률이다.
+
+![figure 1](../blogImage/3-figure1.png)
+
+모델은 transformer의 decoder 부분을 여러 개 쌓아올린 구조이고, 여기에서는 12개의 decoder를 사용했다. decoder 내부의 sub-layer 중에서도 encoder-decoder attention을 없애고 Masked Multi-Head self-Attention과 FFNN만으로 구성했다.
+
+![math 1](../blogImage/3-math1.png)
+
+$h_0$은 토큰 $U$에 embedding을 하고($UW_e$) positional embedding($W_p$) 값을 더해준 값이다.  $h_l$은 $h_{l-1}$ 값을 input으로 받은 decoder block의 output이다. 모든 decoder block을 거치고 나면 최종적으로 각 토큰의 확률 값($P(u)$)을 출력하게 된다.
+
+### Supervised fine-tuning
+labeled dataset $C$의 각 요소가 토큰 $x^1,...,x^m$으로 구성되어있고 해당 요소의 label $y$가 있을 때, 다음 식을 통해 $y$를 예측한다.
+
+$$
+P(y|x^1,...,x^m)=softmax(h_l^mW_y)
+$$
+
+토큰 $x^1,...,x^m$을 pre-train한 모델에 입력해서 최종 decoder block의 $h_l^m$을 구하고, 이 값을 통해 $y$값이 나올 확률을 구하는 식이다. 그리고 다음으로,
+
+$$
+L_2(C)=\sum_{(x,y)}logP(y|x^1,...,x^m)
+$$
+
+전체 데이터 $C$에 대해, input 토큰을 통해 $y$값을 예측할 확률의 전체 합이 최대화되도록 하는 목적 함수($L_2$)를 만든다. 하지만 논문에서는 $L_2$ 자체를 목적 함수로 사용하지 않는다.
+
+fine-tuning 단계에서 pre-train한 LM을 auxiliary 목적 함수로 추가해주는 것이 (1) 모델의 범용성을 높이고, (2) 빠른 convergence에 도움이 된다는 걸 발견했다.
+
+따라서, 다음의 $L_3$를 fine-tuning 단계에서의 목적 함수로 이용한다. ($\lambda$  값으로 weight 조절)
+
+$$
+L_3(C)=L_2(C) + \lambda * L_1(C) 
+$$
+
+### Task-specific input tansformations
+![figure 2](../blogImage/3-figure2.png)
+
+논문에서는 4종류의 task에 대한 fine-tuning 예시를 소개하고 있다. input의 구조만 바꿈으로써 pre-trained 아키텍쳐를 큰 비용을 들여 다시 학습 시키거나 수정할 필요가 없다고 설명한다. input의 시작과 끝에는 randomly initialize된 토큰 \<$s$\>, \<$e$\>를 추가해주고, 문장 사이에는 delimeter token($)을 추가 해준다.
+
+## Experiments
+### Model specifications
+transformer layer는 $N=12, \ H=768,\ A=12$ 으로 구성되고, 내부의 FFNN에서는 3072차원의 hidden states를 사용한다.
+
+BPE를 이용했으며, residual, embedding, attention에 dropout ratio 0.1을 적용했다.
+
+activation function으로는 GELU를 사용했다.
+
+positional embedding은 기존 transformer처럼 sinusoidal version을 사용하지 않고 학습시켜서 사용했다.
+
+### Fine-tuning details
+fine-tuning 동안에 pre-training 에 사용한 hyperparameter들을 그대로 이용했고, dropout만 추가해주었다. lr=6.25e-5, batchsize=32, epochs=3, $\lambda$=0.5, 0.2%의 warmup과 함께 linear learning rate decay를 이용했다.
+
+## Analysis
+### Impact of number of layers transferred
+![figure 3](../blogImage/3-figure3.png)
+
+왼쪽 그래프는 pre-training할 때 layer의 수가 많아짐에 따라 정확도가 높아지는 것을 보여준다.
+
+### Zero-shot Behaviors
+오른쪽 그래프는 fine-tuning 없이 pre-trained 모델에서 zero-shot을 이용해 transformer와 LSTM을 4종류의  비교한다. pre-training을 진행할수록 성능이 꾸준히 높아짐을 보였고, transformer보다 LSTM에서의 분산이 더 크다는 것을 보임으로써 transformer 아키텍쳐의 inductive bias가 transfer에 도움이 된다는 것을 확인했다.
+
+- inductive bias 란?
+    
+    [https://velog.io/@euisuk-chung/Inductive-Bias란](https://velog.io/@euisuk-chung/Inductive-Bias%EB%9E%80)
+    
+    [https://moon-walker.medium.com/transformer는-inductive-bias이-부족하다라는-의미는-무엇일까-4f6005d32558](https://moon-walker.medium.com/transformer%EB%8A%94-inductive-bias%EC%9D%B4-%EB%B6%80%EC%A1%B1%ED%95%98%EB%8B%A4%EB%9D%BC%EB%8A%94-%EC%9D%98%EB%AF%B8%EB%8A%94-%EB%AC%B4%EC%97%87%EC%9D%BC%EA%B9%8C-4f6005d32558)
+    
+    [https://robot-vision-develop-story.tistory.com/29](https://robot-vision-develop-story.tistory.com/29)
+
+### Ablation studies
+![table 1](../blogImage/3-table1.png)
+
+1. fine-tuning에 auxiliary LM을 사용하는 것이 일부 task에서는 도움이 되었지만 일부는 성능이 더 안 좋기도 했다. 전체적인 경향을 볼 때, large dataset에서는 성능 향상에 도움이 되었지만 적은 dataset에서는 그렇지 못했다. 
+2. LSTM보다는 대부분의 경우에 transformer의 성능이 뛰어났다.
+3. pre-training하지 않고 바로 supervised taget task에 대해 학습시킨 결과 성능이 훨씬 낮게 나왔다.
+
+## Conclusion
+상당히 많은 양의 다양한 코퍼스를 pre-training함으로써 많은 task에서 성능을 향상시킬 수 있었다. 이 연구가 다른 많은 unsupervised learning에 대한 연구에 도움이 되기를 기대한다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

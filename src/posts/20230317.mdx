@@ -1,0 +1,135 @@
+---
+id: "20230317"
+slug: "/20230317"
+title: "RoBERTa: A Robustly Optimized BERT Pretraining Approach"
+description: ""
+author: "Vive Kang"
+date: "2023-03-17"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+
+## Motivation & Introduction
+이전에 BERT에 대한 replication study에서 hyperparameter와 데이터 양이 얼마나 영향을 끼치는 지에 대해 연구했다. 저자는 BERT가 상당히 덜 학습 되었다고(undertrained) 생각했고, 기존 BERT 기반 모델들보다 성능이 개선된 RoBERTa라는 모델을 제안한다.
+
+RoBERTa는 BERT에서 조금 변형시킨 모델인데 다음과 같은 점이 다르다.
+
+1. 모델을 더 오래, 더 큰 batch size, 더 많은 데이터로 학습시켰다.
+2. NSP를 하지 않았다.
+3. 더 긴 sequence를 이용해 학습했다.
+4. 마스킹하는 방식을 다양하게 했다.
+
+이 논문의 주요한 contribution은 다음과 같다.
+
+1. BERT 디자인과 학습 전략의 중요성에 대해 알려주고, BERT와는 다른 그 방식을 소개한다.
+2. pre-training 시 더 많은 데이터로 학습한 것이 downstream task의 성능을 더 향상시킴을 보여준다.
+3. MLM pre-training을 적절히 잘 수행했을 때 다른 최근 발표된 모델들에 견줄만큼 좋다는 것을 보여준다.
+
+## Background
+
+### Setup
+BERT는 input으로 두 개의 segment $x_1,...,x_n, \space y_1,...,y_M$의 concat 값을 받는다. 따라서 두개의 segment는 하나의 input sequence로 표현되고, 이 둘을 special delimiter 토큰으로 구분해 다음과 같이 표현된다. [CLS], $x_1,...,x_N$, [SEP], $y_1,...,y_M$, [EOS].
+
+BERT 모델은 많은 양의 데이터로 pre-training 한 후, end task에 맞게 fine-tuning되어 사용된다.
+
+### Architecture
+BERT는 요즘 많은 모델이 사용하는 transformer 기반 아키텍쳐이다.
+
+### Training Objectives
+pre-training 동안 BERT는 2가지 objective를 가진다. Masked Language Modeling & Next Sentence Prediction.
+
+**Masked Language Model (MLM)**
+
+input sequence에 있는 임의의 토큰을 선택하고 [MASK] 토큰으로 대체한다. 전체 중 15%를 마스킹하고, 그 중 80%만 실제로 바꾸고, 10%는 랜덤한 토큰으로, 나머지 10%는 바꾸지 않은 상태로 학습한다.
+
+기존 BERT에서는 마스킹하는 작업이 초반에 한번 수행되고 학습하는 동안 더 이상 변경되지 않았지만, RoBERTa에서는 dynamic masking을 사용한다.
+
+**Next Sentence Prediction (NSP)**
+
+NSP objective는 두 개의 segment가 이어지는 문장인지 분류하는 binary classification loss 이다. 
+
+여러 문장 간의 관계를 파악해야하는 task를 해결하기 위해 제안되었다.
+
+## Training Procedure Analysis
+
+### Static vs. Dynamic Masking
+BERT는 data pre-processing 때 마스킹을 한번만 수행한다.(static masking) 이를 좀 더 개선시키기 위해 dataset을 10배로 복사해서 기존의 sequence가 10종류의 다르게 마스킹된 sequence처럼 학습되도록 했다. 그러나 이 방법도 결국 10종류의 마스킹에 제한된다.
+
+따라서 RoBERTa에서는 input sequence를 넣을 때 마다 새로운 패턴의 마스킹을 부여하도록 했다.(dynamic masking)
+
+![1](../blogImage/8-1.png)
+
+**Result**
+
+좀 더 개선시킨 static masking은 기존 BERT랑 별 차이 없었고, dynamic masking은 static masking과 비교했을 때 성능이 비슷하거나 약간 더 좋았다.
+
+dynamic masking의 이점을 알아냈기 때문에 이후의 연구는 전부 dynamic masking을 활용했다.
+
+### Model Input Format and Next Sentence Prediction
+BERT pre-training에서는 같은 document에서 연속된 두 개의 segment를 선택하거나 다른 document로부터 임의로 두 개의 segment를 선택하여 concatenated segment를 input으로 이용한다. BERT는 MLM objective에 추가로 NSP loss를 이용해 pre-training 한다.
+
+NSP loss가 pre-training에서 중요한 요소라고 여겨져 왔지만, 최근 NSP loss에 의문을 갖는 연구들이 나타나고 있다.
+
+차이를 확실히 이해하기 위해, 여러 training format을 비교했다.
+
+- Segment-pair + NSP
+여러 sentence로 구성된 한 쌍의 segment를 각 input으로 넣어준다. 기본적인 BERT의 input format과 동일하다. 총 sequence length는 512 이하여야 한다. NSP를 포함한다.
+- Sentence-pair + NSP
+한 document의 연속적인 또는 다른 document의 랜덤한 한 쌍의 sentence을 input으로 이용한다. input이 512개에 한참 못 미치기 때문에 batch-size를 늘려서 총 토큰 수가 "Segment-pair + NSP"와 비슷한 수준이 되게끔 했다. NSP를 포함한다.
+- Full-Sentences
+하나 이상의 document에서 연속적으로 sentence를 쭉 연결해 만든 sequence이다. document가 끝나면 다음 document에서 이어서 sentence를 이어서 사용하고, document를 구분할 수 있는 separator 토큰을 사용한다. sequence는 최대 512개의 토큰을 가질 수 있고 NSP는 포함하지 않는다.
+- Doc-Sentences
+"Full-Sentences"와 비슷한 방식으로 input을 구성하는데, document 경계를 넘어갈 수 없다. 그렇게 되면 document의 마지막 sequence는 512보다 훨씬 짧아질 수 있는데, 이 경우 동적으로 batch-size를 늘려 사용한다. NSP는 포함하지 않는다.
+
+**Result**
+
+![2](../blogImage/8-2.png)
+
+"Segment-Pair + NSP"와 "Sentence-Pair + NSP"를 비교했을 때, 각 sentence 단위로 사용하는 것이 downstream task의 성능을 크게 감소시키는 것을 알 수 있었다. 이는 long-range dependency를 학습할 수 없기 때문이라고 추측한다.
+
+"Full-Sentences"와 "Doc-Sentences"에서, 기존의 BERT-base보다 이 두가지 모델의 성능이 더 뛰어난 것을 알 수 있었다. 이로써 NSP loss를 제거하는 것이 성능에 더 도움이 된다는 걸 알 수 있다.
+
+"Full-Sentences"와 "Doc-Sentences"를 비교했을 때, sequence가 하나의 document의 내용으로만 구성되도록 제한하면 성능이 약간 더 좋아짐을 볼 수 있다. 하지만, "Doc-Sentences"는 batch-size를 동적으로 조절해줘야하기 때문에 이후 연구에서는 "Full-Sentences" 모델을 사용한다.
+
+### Training with large batches
+아주 큰 mini-batch를 이용해 pre-training 하는 것이 최적화 속도와 성능 부분에서 좋은 결과를 나타낸다는 연구가 있었고, 최근 다른 연구에서는 BERT도 큰 batch의 학습을 감당할 수 있다는 걸 밝힌 바 있다.
+
+![3](../blogImage/8-3.png)
+
+BERT-base는 256 batch size로 1M step 동안 학습되었다. 연산 비용의 관점에서, 이는 2K batch size를 125K step만큼 학습한 것과 같고, 8K batch size를 31K step 만큼 학습한 것과 같다.
+
+batch size를 늘려가며(+ 그에 맞게 다른 값들을 조정해가면서) BERT-base의 성능을 비교해보았다. 위 표에서 볼 수 있듯, 기존 BERT보다 bsz를 늘린 모델의 성능이 더 좋았다. 큰 bsz는 또한 **gradient accumulation**을 통해 대규모 병렬 하드웨어 없이도 훈련 효율성을 향상시킬 수 있다.
+
+### Text Encoding
+BPE vocabulary는 보통 10K-100K 정도의 subword unit들을 갖는다. 크고 다양한 corpora를 모델링할 때 유니코드 문자들은 BPE vocabulary의 상당한 부분을 차지하게 된다(GPT-2 논문에서는 유니코드만으로 대략 130K). 이런 문제 때문에 GPT-2 논문에서는 subword unit으로 유니코드가 아니라 byte를 사용하는 BPE를 소개했다. byte를 사용함으로써 적절한 크기(50K units)의 subword vocabulary를 학습할 수 있다. 그리고 input을 byte 단위로 쪼개 vocabulary에 있는 subword units으로 표현이 가능하기 때문에 "unknown" 토큰이 필요 없다.
+
+기존 BERT에서는 30K 사이즈의 character-level BPE vocabulary를 사용하고, BPE는 pre-processing 이후에 처리한다. 이와 다르게 RoBERTa에서는 50K 사이즈의 byte-level BPE vocabulary를 사용하고, pre-processing 없이 진행한다. 이렇게 함으로써 15M-20M 정도의 추가적인 parameter를 얻을 수 있다.
+
+- 15M-20M의 추가적인 파라미터??
+    
+    더 많은 vocab을 사용해서 학습을 더 많이 할 수 있으니 더 큰 모델을 만들 수 있다는 뜻인지?
+    
+    아니면, vocab 양이 늘어난 걸 추가적인 파라미터라고 하는 건지?
+    
+
+그러나 byte-level BPE는 기대와는 다르게 몇가지 task에서 오히려 더 안 좋은 성능을 보였다. 그럼에도 불구하고 성능 하락폭이 크지 않고 유니버설 인코딩의 장점이 있다고 판단(작은 하락폭보다 장점이 더 크다고 생각)하여 byte level BPE를 적용했다.
+
+## RoBERTa
+앞서 계속 설명한 BERT의 변경을 통한 성능상의 이점을 누리기 위해 변경된 내용들을 반영한 RoBERTa(**R**obustly **o**ptimized **BERT a**pproach)를 소개한다. 정리하자면 RoBERTa는 dynamic masking, Full-Sentences without NSP, 큰 mini-batch, 더 커진 byte-level BPE을 통해 학습되었다.
+
+추가로, 이전 연구에서 강조되지 않았던 2가지 다른 중요한 요인들에 대해 연구했다. (1) pre-training 때 사용하는 data의 양, (2) pre-training 횟수. 예시로, 최근 발표된 XLNet의 경우 BERT보다 데이터 양은 10배, batch-size는 8배, step은 0.5배로 학습되었다.
+
+**Result**
+
+![4](../blogImage/8-4.png)
+
+RoBERTa 모델은 더 많은 데이터(data)로 학습을 더 많이(steps) 시킬 수록 좋은 성능을 보였습니다. 특히 추가적인 학습 데이터와 step에도 모델이 overfitting되지 않고, 성능이 향상되었다는 점이 주목할 점이다.
+
+## Conclusion
+
+논문에서 여러 검증을 통해 BERT 모델을 더 많이, 더 큰 bsz, 더 많은 데이터로 학습하게 되면 추가적인 성능 향상이 있을 수 있음을 밝혔다. NSP를 없애고 더 긴 sequence를 사용하고 dynamic masking을 사용하는 것도 마찬가지이다. RoBERTa는 다수의 SOTA를 달성 했는데, 이는 BERT에서 간과했던 여러 요인들의 중요성을 시사한다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

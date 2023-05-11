@@ -1,0 +1,108 @@
+---
+id: "20230543"
+slug: "/20230504"
+title: "Bootstrapping a User-Centered Task-Oriented Dialogue System"
+description: ""
+author: "Vive Kang"
+date: "2023-05-04"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+유저의 multi-step cooking과 home improvement(DIY) task를 돕는 dialogue system인 TacoBot을 소개한다. TacoBot은 정확한 language understanding, 유연한 dialogue management, response generation에서 좋은 능력을 보인다.
+
+도중에 몇 가지 어려움이 있었는데, (1) in-domain training data의 부족, (2) (기존 모델들이 학습된)general domain에서 cooking and DIY domain으로의 domain shift, (3) 실제 유저 utterance의 noisy한 특성, 이렇게 3가지가 있었다.
+
+이 문제들을 해결하기 위해 다음과 같은 노력을 했다.
+
+1. GPT-3를 이용한 일련의 data augmentation 전략을 통해 큰 규모의 training data를 만들고 TacoBot system의 기반을 확고히 했다.
+2. simulated data가 아니라 real user conversation을 이용해 evaluation dataset을 만들었다. real dataset은 실제 유저 input distribution을 잘 반영했고 모델의 부족한 점을 잘 드러내 주었다.
+3. 관찰된 유저의 행동을 실행 가능한 가이드라인 형식으로 바꿔서, 이를 통해 dialogue management 모듈이 더 유연하고 generated response가 더 매력적이게끔 했다.
+4. 자동 end-to-end 테스트 시스템을 밑바닥부터 구축했다. 이를 통해 dialogue system의 문제점을 효율적으로 찾아내고 배포 이전에 미리 고칠 수 있었다. 
+
+## System Overview
+
+![0](../blogImage/34-0.png)
+
+TacoBot은 CoBot framework를 기반으로 만들었다. 각 turn 마다 유저는 말하거나 스크린을 터치하는 방식으로 시스템과 interaction이 가능하다. speaking mode에서는 Alexa의 ARS가 유저의 speech를 text utterance로 바꿔준다. screen touch mode에서는 터치 이벤트가 Alexa Presentation Language(APL)로 표현된다. 
+
+user input을 받고 나면 NLU pipeline을 먼저 실행해서 ARS 에러를 고치고 이후 다른 모듈에게 fetch한다. 
+
+NLU pipeline이 성공적으로 마치고 나면, dialogue management 모듈을 호출한다. dialogue flow를 제어하고 예외 처리를 하고 대화가 암묵적으로 task completion 쪽으로 나아가도록 하기 위해 hierarchical finite state machine을 사용한다. 시스템의 dialogue context를 DynamoDB에서 관리하는데 search engine(elastic search)의 결과를 저장한다. 끝으로, DM은 어떤 response generation 모듈을 실행시킬지 결정한다.
+
+선택된 모듈들은 동시에 실행된다. 대부분의 모듈은 template-based이고 추가적으로 neural QA 모듈을 만들어 유저의 question을 다루었다. 마지막 text 또는 multimodal response는 Alexa의 SSML Text-To-Speech(TTS)와 APL 서비스를 통해 만들어져서 유저에게 전달된다.
+
+## Natural Language Understanding
+
+### TacoBot NLU Pipeline
+
+NLU pipeline은 각 dialogue turn이 시작할 때 실행된다. pre-trained LM과 rule-based approach를 이용해 4개의 NLU component를 만들었다. (1) ASR Error Correction, (2) Intent Recognition, (3) Task Name Extraction, (4) Task Domain Classification.
+
+1. **ASR Error Correction**
+TacoBot conversation에 대해 분석한 결과 ASR error가 유저를 실망시키는 주요한 원인이었다. 예를 들어, "step four"를 ASR은 "step for"로 알아들어서 전체적인 시스템을 방해했다. 이걸 완화하기 위해 몇가지 common ASR error를 표기해서 string matching을 통해 고쳐주는 과정을 거쳤다.
+2. **Hierarchical Intent Recognition**
+4개의 카테고리에서 11개의 dialogue intent를 정의해서 유저가 다양한 의도를 갖고 대화를 시작(initiatives)할 수 있도록 했다.
+    - Sentiment
+    각 turn 마다, 유저는 bot의 response에 대해 confirm/reject를 할 수 있다. 따라서 **Affirm**, **Negate**, **Neutral** 3개의 intent를 갖는다.
+    - Commands
+    유저는 몇 가지 command로 대화를 이끌어나갈 수 있다. **Task** **Request**, **Navigation**, **Detail** **Request**, **Task** **Complete**. 그리고 대화 도중 언제든 **Stop** intent를 통해 중단할 수 있다.
+    - Utilities
+    **Repeat**, **Help**, 전체 대화에서 다양한 user question을 파악하기 위한 **Question** intent. **List**, **Timer**.
+    - Exception
+    실수로 dialogue state를 바꾸는 걸 방지하기 위해 out-of-domain input(e.g. incomplete utterances)을 위한 intent를 하나 추가로 갖는다.
+    
+    실제 유저의 initiatives는 더 복잡하고 여러 intent를 한번에 포함할 수 있다. 예를 들어, "No, I want to know how to wash my car"은 **Sentiment**(Negate)와 **Task** **Request**로 동시에 분류될 수 있다. 따라서 intent recognition을 multi-label classification 문제로 보고 model prediction을 dialogue state로 필터링했다. 
+    
+    multi-label classification model을 만들기 위해, data augmentation과 domain adaptation 기술을 적용해 high-quality training data를 얻었다. Sentiment, Question intent는 기존의 dataset을 재사용했고, 다른 intent는 GPT-3에 prompting을 통해 initial set of utterance, intent description, few-shot example을 결합해서 만들었다(Figure 2).
+    
+    ![1](../blogImage/34-1.png)
+    
+    이후, training data를 scale up 하기 위해 synthetic utterance에서 slot value를 placeholder로 바꿔서 template 형태로 만들어주었다. 이 template에는 다양한 sampled value들로 채워서 training utterance를 얻었다. 그리고 linguistic rule과 neural paraphrase model을 이용해 mixed intent utterance를 만들고 다양성을 높였다. 마지막으로, filter words 같은 user noise를 추가해서 intent recognition 모듈을 견고히 했다.
+    
+3. **Task Name Extraction**
+주어진 task request에서 search query를 만들 때 사용할 task name을 추출한다. 예를 들어, "Search bubble tea recipe for me."에서 "bubble tea"를 추출한다. task name extraction을 span extraction task으로 formulate 했고 BERT-base 모델을 task request들로 fine-tuning했다.
+4. **Task Domain Classification**
+또 다른 BERT-based binary classifier를 task request로 학습시켜서 home improvement와 cooking class로 구별하도록 했다. 
+
+### Safety Check
+
+TacoBot은 다음 2가지로 안전한 대화를 보장한다. (1) **Profanity Check**: offensive speech classifier로 user utterance와 system response를 매 turn마다 둘 다 체크한다. offensive user input이 들어오면 이전에 진행 중이던 task로 유저를 redirect하고, 마지막 system response에서 offensive sentence가 발견되면 제거한다. (2) **Task Safety Check**: TacoBot은 2종류의 부적절한 task request를 거절한다. (a) 유저나 그들의 소유물이 훼손될 수 있는 dangerous task, (b) 법적, 의학적인 지식 등이 필요한 professional task. 이런 부적절한 task request를 찾아내기 위해 blacklist keyword에 대해 rule-based matching을 수행한다. (a)의 경우 세션을 즉시 종료해버리고 (b)의 경우 다른 적절한 task로 유저를 redirect 시킨다.
+
+## Dialogue Management
+
+![2](../blogImage/34-2.png)
+
+dialogue의 goal-oriented한 특성 때문에 DM을 3가지 phase로 나누어서 hierarchical finite state machine로 설계했다. 각 phase는 여러 fine-grained dialogue state를 가지고 있다.
+
+- Task Search Phase
+유저가 DIY task나 레시피 등을 찾아보는 TacoBot에서의 첫 phase이다. 유저는 직접적으로 쿼리를 만들고 백엔드 search engine으로부터 검색 결과를 얻을 수 있다.
+- Task Preparation Phase
+여기서 유저는 candidate task들 중에서 선택을 하고 구체적인 정보를 확인한 후에 다음으로 진행할지 결정한다. 다시 Task Search 단계로 돌아갈 수 있고 다음 Task Execution 단계로 진행할 수도 있다.
+- Task Execution Phase
+이제 여기선 이전 단계로 돌아갈 수 없다. TacoBot은 step-by-step으로 task를 완료할 수 있도록 instruction을 제공하고 이때 utility 모듈을 사용한다. WikiHow step은 Instruction, Detail, Tips의 더 작은 3 step으로 나누어서 유저가 더 사용하기 쉽게 했다.
+- Utility Module
+TacoBot 유저는 Utility 모듈을 통해 다양한 feature에 접근할 수 있는데, QA, help information, Alexa list and timer management 가 있다.
+
+유저 input에 따라 dialogue manager(DM)은 state transition을 수행하고 그에 따라 response generator를 고른다. phase가 바뀔 때 엄격한 조건을 걸어두었다. 예를 들어, Task Search phase에서 Task Preparation phase로 넘어가기 위해서는 specific task를 선택해야 한다. 각 phase에 모든 가능한 대화 turn에 대해 hierarchical하게 dialogue state를 부여했다. 이 hierarchical dialogue state는 단계들 사이에 flexible한 전환을 하게 해준다. 또한, dialogue state history stack을 유지해두면서 유저가 이전 state로 쉽게 돌아갈 수 있도록 했다. 
+
+## Search Engine
+
+elastic search 기반으로 cooking(from WholeFoodsMarket)과 home improvement(from WikiHow)에 대해 search engine을 구성했다. 그리고 query expansion을 통해 search result를 더 개선시켰다. neural re-ranking 모듈을 개발해서 home improvement task의 search result를 rerank했다.
+
+### Query Expansion
+
+elastic search는 input query와 task title 간의 lexical similarity를 지나치게 강조해서 많은 경우에 semantically mismatched search result를 출력한다는 단점이 있다. task title을 보통 길고 포괄적인 반면 실제 유저 request는 짧고 구체적이기에 검색에 더 어렵다. 따라서 query expansion technique를 만들어서 이 mismatch를 완화시켰다. query expansion은 유저 query의 task name에 관련된 단어를 추가해서 더 나은 검색 결과를 얻도록 하는 방식이다. 예를 들어 "how to remove spraypaint"의 expanded query는 ["how", "to", "remove", "spraypaint", "spray", "paint"]이다.
+
+### Neural Re-ranking
+
+semantically related search result가 candidate task들 중에서 앞 쪽에 위치하도록 해주는 neural re-ranking 모델을 만들었다. BERT 기반인 re-ranker는 task request와 retrieved task title을 input으로 받고 각 task에 대해 점수를 매긴다. 모델은 하나의 positive 와 9개의 negative sample을 활용한 방식으로 학습시켰다.
+
+## Response Generation
+
+작성 중..
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

@@ -2,6 +2,7 @@
 import { graphql } from 'gatsby'
 import { MDXProvider } from '@mdx-js/react'
 import type { MDXComponents } from 'mdx/types'
+import '../../node_modules/katex/dist/katex.min.css'
 
 /* Internal */
 import { PostTemplateQueryResult } from '@commons/types/QueryType'

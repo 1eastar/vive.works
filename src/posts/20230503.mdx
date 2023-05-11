@@ -1,0 +1,135 @@
+---
+id: "20230503"
+slug: "/20230503"
+title: "MultiWOZ - A Large-Scale Multi-Domain Wizard-of-Oz Dataset for Task-Oriented Dialogue Modeling"
+description: ""
+author: "Vive Kang"
+date: "2023-05-03"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+임의의 모든 task를 수행할 수 있는 human-level의 Conversational AI를 학습시키기는 어렵다. 따라서 여러 연구들에서는 task-oriented dialogue system(e.g. 항공사 봇)을 만드는 걸 목표로 한다.
+
+data-driven approach로 dialogue system을 발전시키기 위해 많은 conversational corpora가 만들어졌다. 하지만 이전 dataset들은 적절한 annotation이 없거나, 양이 적거나, multi-domain use case가 부족하거나 무시할만한 수준의 linguistic variability를 가지는 등 최소 1개 이상의 문제점이 있었다.
+
+논문에서는 다양한 domain과 topic에 대한 large-scale multi-turn conversational corpus인 Multi-Domain Wizard-of-Oz(MultiWOZ)를 소개한다. MultiWOZ는 다른 기존 dataset보다 한 자리수 이상 큰 10K개의 dialogue를 갖고 있고 이는 end-to-end based dialogue modeling이 가능하게 한다.
+
+논문에서는 데이터를 모으는 방법, 데이터 구조에 대한 설명, 데이터 통계에 대한 일련의 분석을 제공한다. 
+
+## Data Collection Set-up
+
+기존의 WOZ set-up을 따라해서 상대적으로 적은 비용으로 annotated dialogue corpora를 모았다.
+
+### Dialogue Task
+
+task oriented dialogue system의 domain은 보통 해당 백엔드 DB(ontology)에 의해 정의된다. 이 ontology에서는 slot이라 부르는 attribute들과 각 slot에 대한 모든 가능한 값들을 정의한다. 각 slot은 imformable slot과 requestable slot으로 나뉘는데, informable slot(e.g. area or price range)은 검색을 위한 constraint에 해당하는 slot이고, requestable slot(e.g. phone number)은 유저가 해당 entity를 요청할 수 있는 slot이다. 여러 domain을 갖는 ontology에서 랜덤 샘플링하여 각 task에 대한 task template(dialogue system으로 해결하려는 task의 structured representation)을 만든다. 따라서 각 domain 별로 task template을 만들고 이를 조합해 single/multi-domain dialogue scenario를 만든다. 특정 domain에서는 booking requirement도 같이 샘플링 되기도 한다(e.g. hotel domain).
+
+더 현실적인 대화를 만들기 위해, 현실에서의 대화처럼 유저의 선호도나 constraint가 바뀔 수 있게끔 초기 constraints of a task(유저가 제공하는 정보. restaurant domain에서 desired cuisine type, location, price range 등)을 DB entry에 없는 값으로 설정한다. 시스템은 유저에게 일치하는 entry가 없다는 걸을 알리고 대체 값을 제공한다.
+
+![0](../blogImage/33-0.png)
+
+### User Side
+
+유저에게 정보를 제공하기 위해, 각 task template을 자연어로 매핑한다. 유저의 goal description은 앞선 turn의 수에 의존한다. 그리고 유저에게 sub-task에 대해 물어볼 때는 main-task와 함께 물어본다(실제 대화와 유사하게 하기 위해). 
+
+### System Side
+
+- 시스템을 wizard라고 부르는 듯.
+
+wizard에게는 유저에게 정보를 제공하는 역할을 하도록 요청한다. 그리고 백엔드 DB에 쉽게 조작할 수 있는 GUI를 제공받고, web form을 통해 유저로부터 받은 input 정보를 전달한다. 이 정보는 전체 turn 동안 유지되며 DB에 쿼리를 날리기 위해 사용된다. wizard는 필요한 정보를 제공하는 데 집중하면서 암묵적으로 belief state에 대한 annotation을 수행한다. 쿼리에서의 결과(현재의 constraint를 만족시키는 list of entities)를 고려하여, wizard는 세부 내용을 더 요청하거나 유저에게 적절한 정보를 제공해준다. 각 시스템 turn마다 wizard는 이전 turn의 쿼리 결과에서부터 이어서 동작한다.
+
+일관성을 지키기 위해, wizard와 유저는 dialogue history에 대해 알고 있어야 한다. 
+
+### Annotation of Dialogue Acts
+
+dialogue data collection에서 가장 어렵고 시간이 많이 걸리는 부분은 dialogue act에 대해 annotating하는 것이다. 구체적으로, set과 dialogue acts의 structure를 정의하는 것이 가장 어려운 일이다. 일반적으로 dialogue acts는 intent(request or inform)와 slot-value pair들로 구성되어 있다. 예를 들어, "inform(domain=hotel, price=expensive)"는 유저가 시스템에게 비싼 호텔로 검색을 제한하라고 정보를 주고 있는 것이다.
+
+annotator간의 큰 차이를 보일 거라 예상했기에, dialogue subset에 대한 3가지 테스트를 먼저 했다. dialogue 당 3개의 annotation으로 약 750 turn을 모았다. single dialogue act 마다 kappa metric을 평가했고 평균 0.704의 높은 값이 나왔긴 하지만 많은 poor case와 poor coverage를 발견해서 dialogue act type을 8개에서 13개로 늘렸다.
+
+![1](../blogImage/33-1.png)
+
+그리고 이 오류를 해결하기 위해 선별된 high quality annotator을 이용했다.
+
+### Data Quality
+
+데이터 수집은 2단계로 진행되었다. (1) dialogue를 먼저 수집하고 annotation을 진행했다. 이렇게 해서 기존의 수집된 dialogue에 있던 에러들(task와 관련 없고 헷갈리는 utterance 등)을 먼저 발견할 수 있었다. (2) 추가 테스트를 수행해서 dialogue에서 제공되는 정보들이 미리 계획된 목표와 일치하는지 확실히 했다.
+
+## MultiWOZ Dialogue Corpus
+
+데이터를 수집할 때 핵심 목표는 information center의 직원과 여행객과의 자연스러운 대화를 모으는 것이었다. 결과적으로 총 7개의 domain으로 구성되어 있다: Attraction, Hospital, Police, Hotel, Restauant, Texi, Train. 뒤에 4개는 sub-task로 예약(booking)을 포함하는 extended domain이다. 각 dialogue는 1~5개의 domain을 갖고 따라서 길이나 복잡성 측면에서 상당히 다양하다.
+
+### Data Statistics
+
+![2](../blogImage/33-2.png)
+
+총 10,438개의 dialogue를 모았다. Figure 2-left는 single/multi domain 각각의 dialogue length distribution을 나타낸다. 70% 이상의 dialogue가 최소 10 turn 이상을 가졌고, single/multi 각각의 평균은 8.93, 15.39였으며, 총 turn의 단순 합은 115,434개 였다. Figure 2-right는 turn 길이의 distribution을 나타낸다. 평균 문장 길이는 유저와 wizard 각각 11.75, 15.12였고 굉장히 고르고 다양한 분포를 가지기에 모델을 더 잘 학습시킬 수 있을 것이라 말한다.
+
+![3](../blogImage/33-3.png)
+
+Figure 3-left는 dialogue act의 distribution을 나타낸다. 오른쪽은 turn 당 dialogue act의 수를 나타내는데 60% 이상의 turn이 2개 이상의 act를 가졌고 이는 system utterance의 풍부함을 보여준다. 
+
+### Data Structure
+
+3,406개의 booking을 포함하는 single domain dialogue와 7,032개의 2~5 multi-domain dialogue가 있다. train/validate/test set을 랜덤하게 나누었다.
+
+각 dialogue는 목적(goal), multiple user, system utterance로 구성되어 있고, 각 turn마다 belief state와 dialogue acts set으로 구성되어 있다.
+
+### Comparison to Other Structured Corpora
+
+![4](../blogImage/33-4.png)
+
+총 dialogue의 수, turn 당 평균 토큰 수, unique 토큰의 수를 포함해 여러 metric으로 다른 dataset들과 비교한 결과의 표이다.unique 토큰의 수가 linguistic richness와 가장 직접적으로 연관된 중요한 지표이다.
+
+## MultiWOZ as a New Benchmark
+
+MultiWOZ의 complextity와 풍부한 linguistic variation은 dialogue task의 좋은 benchmark로 만들어준다. 테스트하기 위해, dialogue modeling task를 3개의 sub task로 나누고 각각에 대한 결과를 도출했다. (1) dialogue state tracking, (2) dialogue-act-to-text generation, (3) dialogue-context-to-text generation.
+
+### Dialogue State Tracking
+
+> dialogue state tracking은 dialogue system에서 대화가 진행되는 동안 유저의 preferences와 beliefs를 예측해나가는 과정이다. belief state는 dialogue state tracking의 특정 과정에서의 유저의 goal 값을 말한다.
+> 
+
+좋은 대화 시스템을 만들기 위해서는 좋은 NLU와 좋은 dislogue state tracking이 그 첫걸음이 되어야 한다. multi-domain dialogue state tracking이 많이 발전하지 않았고 비교할만한 접근 방법이 없기에 MultiWOZ restaurant subset의 sota 결과를 baseline으로 삼았다. 
+
+![5](../blogImage/33-5.png)
+
+1200개의 restaurant domain dialogue로 구성된 WOZ2.0과의 비교를 했다. 위 표는 같은 모델을 WOZ2.0과 baseline MultiWOZ로 학습시킨 결과인데, MultiWOZ의 대화가 더 풍부하고 길이가 길기 때문에 어렵다는 걸 알 수 있다.
+
+### Dialogue-Context-to-Text Generation
+
+좋은 dialogue state tracking 모듈을 만든 후에는 dialogue management와 response generation이 주요 과제이다. belief tracking과 이 두가지를 합친 것이 완전히 독립적으로 동작하는 benchmark를 만들기 위해, wizard annotation으로부터 얻은 "oracle" belief state 가 있는 baseline neural response generation 모델로 실험했다.
+
+![6](../blogImage/33-6.png)
+
+dialogue를 context-response 매핑 문제로 보는 방식을 따라서, seq2seq 모델을 변형해 belief tracker와 DB access component를 추가 feature로 사용하고 decoder에 word decision을 위한 정보를 제공하게끔 한다.
+
+**Training and Evaluation**
+
+실제 유저와 직접 interaction하지 않고 dialogue system을 평가하면 잘못된 결과를 낼 수도 있기 때문에, 3 종류의 automatic metric을 사용했다. 이 중에서 2개는 dialogue task completion과 관련있는데, 시스템이 적절한 entity를 제공하는지(inform rate)와 모든 requested attribute를 이용해 답변하는지(Success rate)를 평가한다. 그리고 BLEU score를 통해 fluency를 평가한다. grid search를 통해 최적의 hyper-parameter를 구했다.
+
+ 같은 neural 아키텍처에 MultiWOZ와 Cam676 dataset을 각각 학습시켰다. 
+
+![7](../blogImage/33-7.png)
+
+Cam676의 Inform metric에서 거의 100%에 가까운 성능을 보인 baseline이 MultiWOZ에서는 거의 30%가 감소했다. attention을 추가해줘도 거의 성능 변화가 없었다. 전체적으로 MultiWOZ에서의 성능이 더 낮은데, 이는 MultiWOZ의 linguistic 다양성을 보여준다.
+
+### Dialogue-Act-to-Text Generation
+
+system act에 대한 annotation 덕분에, MultiWOZ dataset은 structured representation으로부터 NLG를 하는 새로운 benchmark로서 역할을 할 수 있다. NLG task에서 이 benchmark의 어려움을 증명하기 위해 SFX dataset과 비교했다(Table 1). 
+
+![8](../blogImage/33-8.png)
+
+![9](../blogImage/33-9.png)
+
+SFX는 9개의 act type에 12 slot을 가졌고, MultiWOZ는 12 act에 14 slot을 가진다. 이 둘을 BLEU score와 slot error rate(SER) metric으로 비교했다. MultiWOZ에서 상당히 낮은 지표는 SFX restaurant dataset보다 훨씬 어렵다는 걸 보여준다. 이는 아마 60% 이상의 turn이 2개 이상의 act로 구성되어 있기 때문일 것이라고 말한다. 
+
+## Conclusion
+
+speech oriented application이 점점 많아짐에 따라 data 기반의 conversational agent의 필요성이 두드러진다. 다양한 corpora들이 만들어졌지만 linguistic variability가 부족하거나 multi-domain use case가 부족했다. 따라서 이 논문에서는 사람-사람간의 대화를 만드는 큰 규모의 linguistically rich corpus의 data-collection pipeline을 만들었다.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.

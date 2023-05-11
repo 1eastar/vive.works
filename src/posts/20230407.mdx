@@ -1,0 +1,166 @@
+---
+id: "20230407"
+slug: "/20230407"
+title: "ATOMIC: An Atlas of Machine Commonsense for If-Then Reasoning"
+description: ""
+author: "Vive Kang"
+date: "2023-04-07"
+image: ""
+tags: ["NLP", "paper review"]
+
+---
+## Motivation & Introduction
+
+한 상황을 관찰할 때 사람은 관찰하지 않은 그 원인이나 그것이 미치는 영향을 예상할 수 있다. 어떤 일이 이전에 일어났고 다음에 일어날지, 얼마나 다른 사건들이 연관되어 있는지를 알 수 있다. 예를 들어, "X repels Y’s attack"이라는 사건이 발생했을 때, 인간은 그 사건 주변의 다양한 가능성 있는 fact들을 추론할 수 있다. "plausible motivations"의 관점에서 볼 때 X는 본인 스스로를 지키고 싶어했을 것이다. 
+
+![0](../blogImage/21-0.png)
+
+인간에게는 일반적이고 중요한 이런 추론 능력이 요즘 AI 시스템에는 없다. 기존 대다수의 모델들은 task-specific한 데이터와 objective로 학습해서 task-specific한 작업에 효율적이도록 만들어지기 때문에 commonsense reasoning 능력이 부족하다.
+
+이 논문에서는 다양한 inferential knowledge를 다루기 위한 한 step으로 ATOMIC(Atlas of machine commonsense)를 소개한다. ATOMIC은 inferential if-then knowledge에 초점을 둔다. 연구의 목표는 scale, experiments, quality 이 3가지를 만족하는 knowledge repository를 만드는 것이다. 따라서 상당한 bias가 보고된 commonsense를 corpora로부터 추출하는 방식 대신, crowdsourcing experiment를 진행했다.
+
+if-then reasoning type의 새로운 분류 방식 중 하나는 예측할 content에 기반한 방식이다. (1) if-Event-then-Mental-State, (2) if-Event-then-Event, (3) if-Event-then-Persona. 또 다른 분류 방식으로는 casual relation에 따라 분류하는 방식이다. (1) causes, (2) effect, (3) stative(상태). 이 분류 방식을 기반으로 877K개의 inferential knowledge를 수집했다. 
+
+간단한 commonsense에 대해 물었을 때 inferential knowledge에서 unseen event에 대해 추론할 수 있는 NN 모델에 대해서도 연구했다. 실험 결과 NN은 commonsense inferential knowledge를 추상화해서 unseen event에 대해 그럴듯한 causes(원인)과 그 effect(영향)을 예측할 수 있었다. 
+
+## If-then Relation Types
+
+기존 commonsense knowledge resource에 9개의 새로운 dimension을 추가했다. 아래 Figure에서 볼 수 있듯 9개 각각의 dimension을 특정 type of relation으로 분류했다. 
+
+![1](../blogImage/21-1.png)
+
+![2](../blogImage/21-2.png)
+
+**If-Event-Then-Mental-State**
+
+한 event에 대해 mental의 pre/post-condition에 관한 3가지 relation을 정의했다. 특정 event("X compliments Y")에 대해, (1) 그럴만한 event의 의도("X want to be nice"), (2) event 주체의 (감정)반응("X feels good"), (3) 타인의 (감정)반응("Y feels flattered")을 추론한다. 
+
+**If-Event-Then-Event**
+
+event에 대해 pre/post-condition을 구성하는 event에 대한 5가지 relation을 정의했다. 이 relation들은 특정 event에 대해 그 event 이전에 있었던 event와 이후에 발생할 event를 나타낸다. 예를 들어, 인간은 "X makes Y’s coffee"에서 pre-condition으로 "X needs to put coffee in the filter"라는 event를 알고, post-condition으로 "X adds cream and sugar"(voluntary), "X gets thanked by Y"(involuntary)를 가능한 다음 event로 여길 수 있다. 여기에 (implied) participants의 가능한 다음 event에 대한 voluntary와 involuntary를 정의한다.
+
+**If-Event-Then-Persona**
+
+event의 주체가 어떻게 묘사되고 인식되는 지에 대한 stative relation도 정의했다. 예를 들어, "X calls the police"라는 event에 대해  X는 "lawful" 또는 "responsible"한 것 처럼 보인다.
+
+**An Alternative Hierarchy**
+
+Figure 2에서 보듯 위의 relation type들은 다른 hierarchical structure로 분류할 수 있다. (1) "causes", (2) "effects", (3) "stative" 3개의 casual relation으로 분류할 수 있다. 그리고 이 분류는 추론할 때 event의 "agent"(PersonX)에 초점을 두는지, "theme"(PersonY, or others)에 초점을 두는 지에 따라 좀 더 세부적으로 나뉠 수 있다.
+
+## Data
+
+ATOMIC을 만들기 위해 crowdsourcing framework를 만들었다.
+
+### Compiling Base Events
+
+다양한 corpora에서 common event phrase를 추출해 "base event"로 이용한다. 동사(verb predicate)와 argument(subject argument, object argument …)로 구성된 event를 verb phrase라고 정의한다("drinks dark roast in the morning"). 만약 동사와 argument가 동시에 자주 쓰이지 않는다면 argument를 blank placeholder로 대체한다("drinks ___ in the morning"). event에 대한 general한 representation을 학습하기 위해 사람을 뜻하는 토큰을 ‘Person’ variable로 바꾼다(PersonX makes PersonY’s coffee). 
+
+여러 사람이 명시적으로 포함된 event의 경우, 3명의 worker가 간단한 annotation task를 수행했다. event의 participants를 구별하는 건 상당히 중요하기 때문에 각 "Person" 토큰이 PersonX, PersonY, PersonZ 중에 어떤 person인지 선택하게 하고 2명 이상의 worker가 선택한 내용에 대해서만 base event로 두었다.
+
+### Crowdsourcing Framework
+
+worker가 특정 event에 대한 질문에 답을 작성하는 free-form text annotation setup을 수행했다. structured, categorical annotation이 아닌 free-text annotation을 선택한 이유는, (1) annotation speed가 제한되고, (2) categorical label을 사용하면 광범위한 commonsense knowledge, reasoning 능력을 제한하기 때문이다.
+
+commonsense annotation을 모으기 위해 4가지의 task를 수행했다. 각 dimension에 대해 3명의 worker에게 event에 대한 4개의 likely annotation을 요청했다. 어떤 event는 특정 인물로부터 일어나지 않고, 특정 인물에게 영향을 끼치지 않기도 해서 특정 dimension에 대한 annotation은 필요 없을 수 있다(특히, xIntent, xNeed, oReact, oEffect, oWant). 따라서 이런 dimension들에 대해선 worker들에게 먼저 이 inference dimension이 주어진 event와 관련이 있는 지 부터 물어봤다.
+
+![3](../blogImage/21-3.png)
+
+### ATOMIC Statistics
+
+![4](../blogImage/21-4.png)
+
+knowledge graph는 24K개의 base event로부터 만들어진 300K개의 node로 구성되어 있다. 각 node는 평균 2.7 토큰으로 짧은 phrase이다.
+
+## Methods
+
+목표는 unseen event를 고려해서 If-Then commonsense inference를 수행하도록 모델을 학습할 수 있는 지에 대한 연구이다. 이 문제를 conditional sequence generation problem으로 여겼다. event phrase $e$와 inference dimension $c$가 주어졌을 때, 모델은 target $t=f_{\theta}(e,c)$를 생성한다.
+
+**Encoder**
+
+event phrase를 n개의 word vector sequence로 나타내고( $e=\{e_0,e_1,...,e_{n-1}\}$), 각 단어는 $i_{enc}$-dimension을 갖는다. 이후 encoding function($f_{enc}:\mathbb{R}^{i\times h_{enc}} \rightarrow \mathbb{R}^h$)을 이용해 h차원의 hidden representation으로 압축된다.
+
+논문에서는 base word vector로 300차원의 GloVe를 이용하고 이를 augmentation 시킨 1024차원의 ELMo pre-trained embedding을 구해 이 둘을 concat 후 1324차원의 word embedding 을 이용했다. ELMo의 character-based representation을 사용하는 deep contextualized representation(pre-trained embedding)이 unseen event에 대한 더 좋은 representation을 제공했다. encoding function으로는 GRU를 이용했다.
+
+**Decoder**
+
+각 decoder는 hidden size $h_{dec}$의 *unidirectional* GRU를 이용한다. target은 vector sequence $t=\{t_0,t_1,...\}$이고 각 $t_i$는 학습된 embedding에 기반한다. 그러고 decoder는 $p(t_{i+1}|h_{dec}^{(i)},t_0,t_1,...,t_i)=softmax(W_o \times GRU(h_{dec}^{(i)},t_i)+b_o)$ 를 maximize한다.
+
+**Single vs. Multitask Learning**
+
+commonsense dimension과 multitask modeling을 합치려고 다양한 방법을 실험해봤다(즉, multitask learning도 가능할지). commonsense dimension들의 hierarchical structure를 이용하고 관련된 dimension끼리는 encoder를 공유하도록 모델을 디자인했다. 다음의 모델들을 실험했다.
+
+- **Event2(IN)Voluntary**
+voluntary, involuntary event로 구분해서 dimension들을 구분했다.
+이 모델은 4개의 voluntary decoder에 대해 하나의 encoder를 사용하고, 5개의 involuntary decoder에 대해 하나의 encoder를 사용했다.
+- voluntary: `xIntent` `xNeed` `xWant` `oWant`
+- involuntary: `xAttr` `xEffect` `xReact` `oEffect` `oReact`
+- **Event2PersonX/Y**
+event의 agent와 theme을 분리시켰다.
+이 모델은 6개의 agent decoder에 대해 하나의 encoder를, 3개의 theme decoder에 대해 하나의 encoder를 공유한다.
+- **Event2Pre/Post**
+event가 causes와 연관되어 있는지, effects와 연관되어 있는지에 따라 구분한다.
+- causes: `xNeed`, `xIntent`
+- effects: `xEffect` `xReact` `xWant` `oEffect` `oReact` `oWant`
+`xAttr`는 single task baseline에서 커버가능해서 제외시켰다.
+- **single task baseline**
+9개의 encoder와 decoder를 각각 구성해서 dimension 당 하나씩 사용했다.
+
+**Training Details**
+
+전체 event를 traininig : validation : test set = 80% : 10%: 10%로 나누고, 나눌 때 처음 두 단어가 같은 event는 같은 set으로 넣었다.
+
+예측된 target distribution과 gold distribution 간의 cross-entropy를 최소화하도록 학습시켰다. multitask training에서는 각 task의 평균 cross-entropy 값을 이용했다. 
+
+300차원의 GloVe embedding과 1024차원의 ELMo embedding을 concat한 embedding을 이용했다.
+
+## Results
+
+논문에서는 모델이 unseen event에 대해 추론하는 능력을 평가한다. 모델은 9개의 dimension 각각의 if-then inference에 대해 natural language expression을 생성하고, automatic scoring과 human evaluation을 통해 그 성능을 평가한다.
+
+### Automatic Scores
+
+각 모델의 각각의 inference dimension에 대한 sequence generation을 BLEU score로 평가했다. top-10 prediction과 human annotation 간의 BLEU score 평균 값을 계산한다. 어떤 event는 9개의 inference dimension을 전부 포함하지 않을 수도 있기 때문에("PersonX sees PersonX’s house" 에는 PersonX 외에 다른 participant가 없다) annotator가 해당 inference dimension을 사용할지에 대해 결정해야 한다.
+
+BLEU score를 계산할 때, 1/3 이상의 inference dimension이 사용되지 않으면 해당 instance는 제외시켰다.
+
+BLEU score는 n-gram exact match에 기반하고 다른 단어 간의 semantic한 연관성을 파악하지 못하기 때문에 human annotation이 추가로 필요하다.
+
+![5](../blogImage/21-5.png)
+
+![6](../blogImage/21-6.png)
+
+(논문에서는 dimension 각각 수행한 9ENC9DEC보다 hierarchical structure의 성능이 더 좋다고 말하는데, 표에서는 9ENC9DEC가 더 좋음..)
+
+### Human Evaluation
+
+임의로 100개의 event를 뽑고 beam search를 이용해 각 dimension마다 top-10개의 inference를 선택한다. 이 top-10 inference를 5명에게 보여주고 valid한다고 생각하는 걸 전부 다 선택하게 했다.
+
+![7](../blogImage/21-7.png)
+
+위와 똑같은 방식으로 앞서 worker들이 만든 ATOMIC annotation에 대해 평가를 하게 했고, 위 표의 맨 마지막 줄(gold ATOMIC annotations)에 나와있다.
+
+if-then hierarchy 구조의 모델이 성능이 더 좋았다. 그 중에서 voluntary/involuntary로 구분해 모델링한 것이 가장 합리적인 generation을 했다.
+
+### Qualitative Results
+
+Figure 4에서 voluntary/involuntary 모델이 생성한 내용(로봇 그림)을 보면 그럴듯한 예측을 정확하게 하고 있다.
+
+### Comparison with ConceptNet
+
+ConceptNet은 graph 형태로 commonsense knowledge를 표현하는데, words or phrases로 구성된 term과 fixed set of edge type에서 만들어진 relation으로 구성된다. ConceptNet도 general commonsense를 파악하긴 하지만(entails, causes, motivated by 같은 inferential relation을 포함하긴 하지만) 그 양이 전체의 1%정도밖에 안 되는 적은 양이다.
+
+ATOMIC은 sequences of events에 초점을 둔다. loosely하게 보면 ATOMIC의 event와 dimension이 ConceptNet의 concept(term)과 relation과 비슷해 보이지만, 각각의 dimension은 아무리 ConceptNet relation들을 조합하더라도 정확히 매치시킬 수 없다. 
+
+ConceptNet과 ATOMIC의 차이를 비교해보기 위해 dimension과 relation의 가장 그럴듯한 매핑을 시켜보았다.
+
+![8](../blogImage/21-8.png)
+
+ATOMIC에서의 < event1, dimension, event2 >와 ConceptNet의 < concept1, relation, concept2 > triples들 간에 overlap을 계산해 보았는데, wants 7%, effects 6%, needs 6%, intents 5%, reactions 2%, attributes 0%가 나왔다. 게다가 ATOMIC event의 25%만이 ConceptNet에서 발견되었는데, ATOMIC이 기존 resource에서 파악하지 못했었던 상당한 양의 새로운 inferential knowledge를 제공한다는 걸 의미한다.
+
+## Conclusion
+
+We present ATOMIC, an atlas of everyday commonsense inferential knowledge about events described in natural language and associated with typed if-then relations. ATOMIC consists of over 300k events associated with 877k inferential relations, making it the largest knowledge graph of its kind. Our crowdsourcing framework gathers annotations in the form of free-form textual responses to simple questions which enables large-scale high quality collection of commonsense about events. We also present neural network models that can learn to reason about previously unseen events to generate their likely causes and effects in natural language.
+
+---
+
+피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.
