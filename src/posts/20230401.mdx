@@ -150,7 +150,7 @@ dot-product 뿐만 아니라 cosine과 Euclidean L2 distance도 흔히 사용되
 
 **Cross-dataset generalization**
 
-discriminative training한 DPR이 fine-tuning 없이 다른 dataset에 바로 적용되어도 generalize를 잘 하는지 궁금했다. 확인하기 위해 NQ만으로 DPR을 학습시키고 작은 dataset인 WQ, TREC으로 테스트했다. DPR은 generalize를 잘 했는, fine-tuning된 모델의 best performance보다 3-5 point 정도의 성능 차이만 보였다. 
+discriminative training한 DPR이 fine-tuning 없이 다른 dataset에 바로 적용되어도 generalize를 잘 하는지 궁금했다. 확인하기 위해 NQ만으로 DPR을 학습시키고 작은 dataset인 WQ, TREC으로 테스트했다. DPR은 generalize를 잘 했고, fine-tuning된 모델의 best performance보다 3-5 point 정도의 성능 차이만 보였다. 
 
 ### Qualitative Analysis
 
@@ -166,7 +166,7 @@ discriminative training한 DPR이 fine-tuning 없이 다른 dataset에 바로 �
 
 end-to-end QA system으로 retriever + reader 구조를 이용한다. $k$개(최대 100개)의 retrieved passage에 대해 passage selection score를 매긴다. 그리고 각 passage에서 answer span을 뽑아서 span score를 매긴다. 가장 높은 passage selection score를 가진 passage에서의 best span을 최종 정답으로 선택한다. 
 
-학습할 때, top-100 retrieved passage에서 1개의 positive passage와 $m-1$개의 negative passage를 사용했다($m$은 hyperparameter, 논문에서는 24). positive passage에 있는 모든 answer span으 marginal log-likelihood와 선택된 positive passage의 log-likelihood를 결합해 최대화하도록 학습시킨다. large dataset(NQ, TriviaQA, SQuAQ)는 16 batch size, small datset(TREC, WQ)에는 4 batch size를 사용했다. 
+학습할 때, top-100 retrieved passage에서 1개의 positive passage와 $m-1$개의 negative passage를 사용했다($m$은 hyperparameter, 논문에서는 24). positive passage에 있는 모든 answer span의 marginal log-likelihood와 선택된 positive passage의 log-likelihood를 결합해 최대화하도록 학습시킨다. large dataset(NQ, TriviaQA, SQuAQ)는 16 batch size, small dataset(TREC, WQ)에는 4 batch size를 사용했다. 
 
 ### Results
 
@@ -190,6 +190,7 @@ open-domain QA에서 기존의 sparse retriever보다 dense retriever가 성능�
 analysis와 ablation에서 보였듯 모델와 similarity function이 더 복잡하다고 해서 좋은 성능을 내는 건 아니었다. 
 
 결과적으로 여러 개의 open-domain QA benchmark에서 sota를 달성했다.
+
 ---
 
 피드백은 언제나 환영합니다. 잘못된 내용이 있으면 댓글로 피드백 부탁드립니다.
